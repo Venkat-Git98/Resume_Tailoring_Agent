@@ -441,10 +441,10 @@ def scrape_jobright_platform(scraper_cfg, platform_logger, seen_job_ids_globally
         # --- END CRITICAL ---
         
         platform_logger.info(f"Jobright: Using system-installed chromedriver from apt, expected at {chromedriver_path}")
-        service = ChromeService(executable_path=chromedriver_path)
+        #service = ChromeService(executable_path=chromedriver_path)
         service_args = ['--verbose'] # This will send chromedriver logs to stderr
         service = ChromeService(
-            executable_path="/usr/bin/chromedriver",
+            executable_path=chromedriver_path,
             service_args=service_args
         )
         driver = webdriver.Chrome(service=service, options=options)
