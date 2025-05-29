@@ -5,9 +5,9 @@ echo "INSTALL_SCRIPT: Starting Chromedriver installation..."
 
 # !!! USER ACTION: YOU MUST REPLACE THIS URL WITH A VALID CHROMEDRIVER URL !!!
 # 1. Go to: https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json
-# 2. Find a recent "Stable" version (e.g., for Chrome/Chromium 125, 126).
+# 2. Find a recent "Stable" version (e.g., for Chrome/Chromium 125 or 126).
 # 3. Copy the URL for the "chromedriver" -> "linux64" download.
-# Example (this URL might be outdated or specific, VERIFY AND REPLACE IT):
+# Example (this URL will likely be outdated or specific, VERIFY AND REPLACE IT):
 CHROMEDRIVER_URL="https://storage.googleapis.com/chrome-for-testing-public/125.0.6422.76/linux64/chromedriver-linux64.zip"
 
 echo "INSTALL_SCRIPT: Downloading Chromedriver from ${CHROMEDRIVER_URL}..."
@@ -23,6 +23,7 @@ echo "INSTALL_SCRIPT: Unzipping Chromedriver to /tmp/chromedriver_extracted_temp
 sudo unzip -o /tmp/chromedriver_linux64.zip -d /tmp/chromedriver_extracted_temp
 if [ $? -ne 0 ]; then
     echo "INSTALL_SCRIPT: FATAL ERROR - Chromedriver unzip failed."
+    echo "INSTALL_SCRIPT: Listing /tmp contents:"
     sudo ls -l /tmp # List /tmp content for debugging
     exit 1
 fi
