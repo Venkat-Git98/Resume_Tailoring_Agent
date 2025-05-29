@@ -2,10 +2,6 @@
 
 # nixpacks.toml
 
-# Define providers as an array of strings
-providers = ["python@3.12"] # Or your specified Python version, e.g., "python@3.11"
-
-[phases.setup]
   aptPkgs = [
     "chromium-browser",
     "curl", "unzip", "jq", # jq might be useful if you enhance version fetching later
