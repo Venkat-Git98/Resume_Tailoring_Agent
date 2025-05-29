@@ -383,69 +383,58 @@ def extract_linkedin_job_page_details(job_url):
 def scrape_jobright_platform(scraper_cfg, platform_logger, seen_job_ids_globally):
     platform_logger.info(f"Jobright: Starting scraping for: {scraper_cfg.get('search_name')}")
 
-    # Configuration from scraper_cfg and globals from scrape.py
-    jr_username = scraper_cfg.get("username")
-    jr_password = scraper_cfg.get("password")
+    jr_username = scraper_cfg.get("username") # This should be JOBRIGHT_USERNAME_GLOBAL
+    jr_password = scraper_cfg.get("password") # This should be JOBRIGHT_PASSWORD_GLOBAL
     jr_profile_dir = scraper_cfg.get("profile_dir") # This is USER_DATA_PROFILE_DIR_JOBRIGHT_GLOBAL
-    target_job_count = scraper_cfg.get("target_job_count", 10)
-
-    # Globals from scrape.py (ensure they are accessible in this scope)
-    # JOBRIGHT_URL, JOBRIGHT_RECOMMEND_URL, USER_AGENT
-    # project_root is also a global in scrape.py for screenshot paths
 
     newly_detailed_jobs_for_jobright = []
 
     options = webdriver.ChromeOptions()
-    # Headless mode can be a parameter in scraper_cfg if needed, e.g., scraper_cfg.get("headless", False)
-    # For now, assuming headed operation unless specified otherwise
-    # if headless_param: # Example if you add headless_param to scraper_cfg
     options.add_argument('--headless')
-    options.add_argument('--disable-gpu')
-    
     options.add_argument("--window-size=1920,1080")
-    if jr_profile_dir and os.path.isabs(jr_profile_dir):
-        options.add_argument(f"user-data-dir={jr_profile_dir}")
-        platform_logger.info(f"Jobright: Using Chrome profile directory: {jr_profile_dir}")
-    else:
-        platform_logger.warning(f"Jobright: Profile directory '{jr_profile_dir}' is not valid, not absolute, or not provided. Using temporary profile.")
-        # If a profile is critical, you might want to return [] here.
-        # The standalone script would proceed with a warning if path wasn't absolute.
-        # Your original scrape.py also warns and uses a temp profile.
+
+    # --- TEMPORARY DIAGNOSTIC STEP: Run without a persistent user profile ---
+    platform_logger.info("Jobright: DIAGNOSTIC - Running WITHOUT a persistent user-data-dir for this attempt.")
+    # if jr_profile_dir and os.path.isabs(jr_profile_dir):
+    #     options.add_argument(f"user-data-dir={jr_profile_dir}")
+    #     platform_logger.info(f"Jobright: Using Chrome profile directory: {jr_profile_dir}")
+    # else:
+    #     platform_logger.warning(f"Jobright: Profile directory '{jr_profile_dir}' not valid or not provided. Using temporary profile.")
+    # --- END TEMPORARY DIAGNOSTIC STEP ---
 
     options.add_argument("--disable-extensions")
-    options.add_argument('--no-sandbox')
-    options.add_argument('--disable-dev-shm-usage')
-    options.add_argument("--disable-blink-features=AutomationControlled") 
-    options.add_experimental_option("excludeSwitches", ["enable-automation"])
-    options.add_experimental_option('useAutomationExtension', False)
-    options.add_argument(f'user-agent={USER_AGENT}') # USER_AGENT from scrape.py globals
+    options.add_argument("--disable-gpu")  # Often necessary for headless and stability
+    options.add_argument('--no-sandbox')   # Crucial for server/container environments
+    options.add_argument('--disable-dev-shm-usage') # Overcomes resource limits in /dev/shm
 
-    # ADD/MODIFY THIS LINE: Explicitly set the binary location
+    # Add verbose logging arguments for Chromium browser itself
+    # Logs from Chromium might go to stderr or a file like /tmp/chrome_debug.log or ~/.config/google-chrome/chrome_debug.log
+    options.add_argument('--enable-logging')
+    options.add_argument('--v=1') # You can try higher numbers like --v=2 for more verbosity
+
+    # Ensure Selenium knows where the browser executable is
     options.binary_location = "/usr/bin/chromium-browser"
 
     driver = None
     try:
-         # Path to chromedriver installed by apt's chromium-chromedriver package
-        # This is the most common path.
         chromedriver_executable_path = "/usr/bin/chromedriver"
-        
-        # As a fallback, sometimes it might be here, but /usr/bin/chromedriver is more standard for the package.
-        # import os
-        # if not os.path.exists(chromedriver_executable_path):
-        #     platform_logger.warning(f"Chromedriver not found at {chromedriver_executable_path}, trying /usr/lib/chromium-browser/chromedriver")
-        #     chromedriver_executable_path = "/usr/lib/chromium-browser/chromedriver"
+        platform_logger.info(f"Jobright: Using system chromedriver from apt package, expected at {chromedriver_executable_path}")
 
-        platform_logger.info(f"Jobright: Using system-installed chromedriver from apt package, expected at {chromedriver_executable_path}")
+        # Enable verbose logging for the chromedriver service itself.
+        # This will print chromedriver's own logs to stderr, which should appear in Railway logs.
+        service_args = ['--verbose']
+        # To attempt logging to a file instead (might be easier to find if stderr is cluttered):
+        # chromedriver_log_path = "/tmp/chromedriver_service.log" # Or /app/logs/chromedriver_service.log if /app/logs is writable
+        # service_args = [f'--log-path={chromedriver_log_path}', '--verbose']
         
-        service = ChromeService(executable_path=chromedriver_executable_path)
+        service = ChromeService(
+            executable_path=chromedriver_executable_path,
+            service_args=service_args
+        )
+        
+        platform_logger.info("Jobright: Initializing webdriver.Chrome with verbose logging enabled...")
         driver = webdriver.Chrome(service=service, options=options)
-        # service = ChromeService(executable_path=ChromeDriverManager().install())
-        # driver = webdriver.Chrome(service=service, options=options)
-        # driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-        # # MODIFY THIS LINE: Tell ChromeDriverManager to use ChromeType.CHROMIUM
-        # service = ChromeService(executable_path=ChromeDriverManager(chrome_type=ChromeType.CHROMIUM).install())
-        # driver = webdriver.Chrome(service=service, options=options)
-        # # driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})") # From previous version
+        platform_logger.info("Jobright: webdriver.Chrome initialized successfully!") # If you see this, it worked!
 
         # Wait times from user's working standalone script
         wait = WebDriverWait(driver, 15)
@@ -754,11 +743,24 @@ def scrape_jobright_platform(scraper_cfg, platform_logger, seen_job_ids_globally
         platform_logger.info(f"Jobright: Finished card processing loop. Found {len(newly_detailed_jobs_for_jobright)} new jobs this run.")
         return newly_detailed_jobs_for_jobright
 
-    except Exception as e_main_jr: 
+    except Exception as e_main_jr:
         platform_logger.critical(f"Jobright: Major error in Jobright scraping function: {e_main_jr}", exc_info=True)
+        # You could attempt to read and log /tmp/chromedriver_service.log here if you used that option
+        # For example:
+        # if os.path.exists(chromedriver_log_path):
+        #     try:
+        #         with open(chromedriver_log_path, "r") as log_f:
+        #             platform_logger.info(f"--- Chromedriver Service Log ({chromedriver_log_path}) ---")
+        #             platform_logger.info(log_f.read())
+        #             platform_logger.info(f"--- End Chromedriver Service Log ---")
+        #     except Exception as e_log:
+        #         platform_logger.error(f"Failed to read {chromedriver_log_path}: {e_log}")
+        # else:
+        #     platform_logger.info(f"Chromedriver service log not found at {chromedriver_log_path}")
+
+        # Your existing screenshot logic can remain if driver object was created before crash
         if driver:
             try:
-                # Ensure screenshots_scraper directory exists (project_root from scrape.py's global scope)
                 screenshots_dir = os.path.join(project_root, "screenshots_scraper") 
                 os.makedirs(screenshots_dir, exist_ok=True)
                 screenshot_path_fname = f'{scraper_cfg.get("search_name", "jobright").replace(" ", "_")}_Major_Error_App.png'
@@ -767,11 +769,12 @@ def scrape_jobright_platform(scraper_cfg, platform_logger, seen_job_ids_globally
                 platform_logger.info(f"Jobright: Screenshot of error state saved to {full_screenshot_path}")
             except Exception as e_screenshot:
                 platform_logger.error(f"Jobright: Failed to save error screenshot: {e_screenshot}")
-        return [] 
+        return [] # Return empty list on error
     finally:
         if driver:
             platform_logger.info("Jobright: Closing browser.")
             driver.quit()
+            platform_logger.info("Jobright: Browser closed.")
     
     return newly_detailed_jobs_for_jobright # Should be returned inside try ideally, but good to have a final return
 
