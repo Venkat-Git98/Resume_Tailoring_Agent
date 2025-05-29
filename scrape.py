@@ -421,7 +421,41 @@ def scrape_jobright_platform(scraper_cfg, platform_logger, seen_job_ids_globally
     options.add_argument("--disable-gpu")  # Highly recommended for headless and stability
     options.add_argument('--no-sandbox')   # Essential for server/container environments
     options.add_argument('--disable-dev-shm-usage') # Crucial for resource-constrained environments
-
+    # Options to reduce memory and resource consumption
+    options.add_argument('--single-process') # VERY IMPORTANT FOR MEMORY: Runs Chrome in a single process. Can reduce stability on complex sites but drastically cuts RAM.
+    options.add_argument('--disable-extensions')
+    options.add_argument("--disable-features=AudioServiceOutOfProcess,IsolateOrigins,site-per-process") # Site-per-process is memory hungry
+    options.add_argument('--disable-software-rasterizer')
+    options.add_argument('--disable-background-networking')
+    options.add_argument('--disable-background-timer-throttling')
+    options.add_argument('--disable-backgrounding-occluded-windows')
+    options.add_argument('--disable-breakpad') # Disables crash reporting
+    options.add_argument('--disable-client-side-phishing-detection')
+    options.add_argument('--disable-component-update') # No component updates in a container
+    options.add_argument('--disable-default-apps')
+    options.add_argument('--disable-domain-reliability')
+    options.add_argument('--disable-hang-monitor')
+    options.add_argument('--disable-ipc-flooding-protection')
+    options.add_argument('--disable-notifications')
+    options.add_argument('--disable-offer-store-unverified-chrome-apps')
+    options.add_argument('--disable-popup-blocking')
+    options.add_argument('--disable-print-preview')
+    options.add_argument('--disable-prompt-on-repost')
+    options.add_argument('--disable-renderer-backgrounding')
+    options.add_argument('--disable-setuid-sandbox') # Often used with --no-sandbox
+    options.add_argument('--disable-speech-api')
+    options.add_argument('--disable-sync')
+    options.add_argument('--hide-scrollbars')
+    options.add_argument('--ignore-gpu-blacklist')
+    options.add_argument('--metrics-recording-only')
+    options.add_argument('--mute-audio')
+    options.add_argument('--no-default-browser-check')
+    options.add_argument('--no-first-run')
+    options.add_argument('--no-pings')
+    options.add_argument('--no-zygote') # Used with --no-sandbox for some environments, helps reduce processes
+    options.add_argument('--password-store=basic')
+    options.add_argument('--use-gl=swiftshader') # Force software rendering, may reduce GPU memory if any was used
+    
     # Enable verbose logging for Chromium browser itself.
     # These logs usually go to stderr or a standard log location like /tmp/chrome_debug.log
     options.add_argument('--enable-logging')
