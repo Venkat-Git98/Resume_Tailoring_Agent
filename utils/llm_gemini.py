@@ -76,22 +76,25 @@ class GeminiClient:
             logging.error(f"Error parsing Gemini API response: {e}. Response text: {response.text}")
             raise RuntimeError(f"Error parsing Gemini API response: {e}")
 
+import logging
+from typing import List, Optional
+
 def get_section_prompt(
     section: str,
     original: str,
-    job_title: str, 
-    requirements: List[str], 
-    ats_keywords: List[str], 
-    company_name_from_jd: Optional[str] = None, 
-    job_location_type: Optional[str] = None, 
-    master_profile_text: Optional[str] = None, 
+    job_title: str,
+    requirements: List[str],
+    ats_keywords: List[str],
+    company_name_from_jd: Optional[str] = None,
+    job_location_type: Optional[str] = None,
+    master_profile_text: Optional[str] = None,
     previously_tailored_sections_text: Optional[str] = None
 ) -> str:
     reqs_str = '\n'.join(f"- {r}" for r in requirements) if requirements else "No specific requirements provided."
     ats_keywords_str = ', '.join(ats_keywords) if ats_keywords else "No specific ATS keywords identified."
-    
+
     one_page_constraint_reminder = "CRITICAL OVERALL REMINDER: The entire resume (all sections combined) MUST ideally fit on a single page. Therefore, ensure this current section's content is extremely concise and adheres strictly to all specified length and bullet point limits."
-    
+
     bolding_instruction = "INSTRUCTION FOR KEYWORD EMPHASIS: Within your rewritten text for THIS section, identify 2-4 of the most impactful keywords or phrases (especially those aligning with the provided ATS KEYWORDS or the KEY REQUIREMENTS from the job description for the target role) and enclose them in double asterisks. For example: 'developed a **machine learning** model for **predictive analytics**.' Do NOT bold section titles or sub-headers themselves using this markdown (e.g., do not output '**Programming Languages:**')."
 
     master_profile_context_str = ""
@@ -134,7 +137,7 @@ You are an expert technical resume writer and career coach. Your task is to rewr
 * **Company Name from Job Description (FOR CONTEXT ONLY, DO NOT MENTION IN SUMMARY):** {company_name_from_jd if company_name_from_jd else "Not specified"}
 * **Job Location Type from Job Description (FOR CONTEXT ONLY, DO NOT MENTION IN SUMMARY):** {job_location_type if job_location_type else "Not specified"}
 """
-    # --- SUMMARY SECTION (Preserved from your last version) ---
+    # --- SUMMARY SECTION (UPDATED AS PER YOUR REQUEST) ---
     if section == 'summary':
         candidate_education_level_fact = "The candidate is pursuing a Master's degree (M.S.) in Computer Science."
         return f"""
@@ -142,7 +145,7 @@ You are an expert technical resume writer and career coach. Your task is to rewr
 
 **MANDATORY INSTRUCTIONS & CONSTRAINTS for the SUMMARY section (Follow all very strictly):**
 1.  **Focus on Candidate & Role Type, NOT Specific Company/Opportunity:**
-    * The summary MUST be about the **candidate's general qualifications, skills, and experience relevant to the TARGET JOB TITLE ('{job_title}')**.
+    * The summary MUST be about the **candidate's general qualifications, skills, and experience relevant to the *type* of role indicated by the TARGET JOB TITLE ('{job_title}')**.
     * **ABSOLUTELY DO NOT** mention the specific company name ('{company_name_from_jd if company_name_from_jd else "the company"}'), its products, its mission, its values, or any company-specific information.
     * **DO NOT** tailor the summary to the specific company. It should be a general, strong summary for the *type* of role.
     * **DO NOT** mention work arrangement preferences (e.g., remote, hybrid, onsite) or the specific location mentioned in the job description.
@@ -154,7 +157,7 @@ You are an expert technical resume writer and career coach. Your task is to rewr
     * The total character count for the entire summary (including spaces) **MUST be strictly between 350 and 450 characters.**
     * **DO NOT produce a summary shorter than 3 complete lines or less than 350 characters.** Be impactful yet concise within these strict limits.
 4.  **Content - Core Message (Candidate-Centric):**
-    * Naturally and prominently integrate the exact TARGET JOB TITLE: "{job_title}".
+    * The summary should clearly articulate the candidate's professional identity (e.g., 'Machine Learning Engineer,' 'Data Scientist') and highlight their core skills and experience that align with the *nature* of the TARGET JOB TITLE ('{job_title}'). **However, DO NOT explicitly state or repeat the TARGET JOB TITLE (e.g., '{job_title}') itself within the summary text.** Focus on the candidate's expertise relevant to this *type* of role.
     * Highlight 2-3 of the candidate's most crucial skills, core competencies, and significant experiences (drawn from their "Original Content of 'SUMMARY'" or "CANDIDATE'S MASTER PROFILE") that directly align with the "Key Requirements" and "ATS KEYWORDS" for the *target role type*.
     * Briefly state total years of relevant experience if clearly available and impactful for the role type.
     * **IMPORTANT FORMATTING NOTE:** The summary text **MUST start directly** with the descriptive text about the candidate. **DO NOT** begin with labels like "Summary:", "Professional Summary:", "Objective:", "Responsibilities:", or any similar prefixes.
@@ -164,15 +167,16 @@ You are an expert technical resume writer and career coach. Your task is to rewr
 8.  **Output Format:** Provide ONLY the rewritten summary text. Absolutely DO NOT include any introductory phrases like "Rewritten Professional Summary:", section labels (like "SUMMARY:"), or any other headers or conversational text in your output. Start directly with the first sentence of the summary.
 9.  {one_page_constraint_reminder}
 
-**Rewritten Professional Summary (Your output should be ONLY the summary text itself, precisely adhering to all instructions above, especially regarding educational accuracy, company non-mention, and length constraints):**
+**Rewritten Professional Summary (Your output should be ONLY the summary text itself, precisely adhering to all instructions above, especially regarding educational accuracy, company non-mention, non-mention of the specific target job title, and length constraints):**
 """
 
-    # --- WORK EXPERIENCE SECTION (Preserved from your last version) ---
+    # --- WORK EXPERIENCE SECTION (UPDATED AS PER YOUR REQUEST) ---
     elif section == 'work_experience':
         role_specific_constraints_guidance = """
     * For each role, aim to make bullet points as impactful and detailed as possible within the specified upper character limit. Avoid overly brief points if more detail can be provided effectively.
     * If a role is titled "AI/ML Engineer" (or very similar, like "Machine Learning Engineer"):
-        * Generate EXACTLY 4 bullet points. Each bullet point should aim for **approximately 130-150 characters** and **MUST NOT EXCEED 150 characters.**
+        * Generate EXACTLY 4 bullet points. Each bullet point should aim for **approximately 140-160 characters**, and ideally closer to 160 characters. Each bullet point **MUST be AT LEAST 120 characters** and **MUST NOT EXCEED 160 characters.**
+        * Within these character limits, ensure each bullet point provides specific details about the *action taken*, the *technologies used*, the *scale or context*, and the *quantifiable result or impact*. Each point should represent a significant achievement or responsibility.
     * If a role is titled "Data Consultant":
         * Generate EXACTLY 2 bullet points. Each bullet point should aim for **approximately 80-100 characters** and **MUST NOT EXCEED 100 characters.**
     * If a role is titled "Digital Transformation Developer":
@@ -206,13 +210,13 @@ You are an expert technical resume writer and career coach. Your task is to rewr
 8.  **Order:** List roles in reverse chronological order (most recent first).
 9.  **No Fabrication:** Base rewrites strictly on the source text. DO NOT INVENT details or achievements.
 10. **Tone:** Professional, results-oriented, and human-like.
-11. {one_page_constraint_reminder} 
+11. {one_page_constraint_reminder}
 12. **Output Format:** Provide ONLY the rewritten work experience text, starting directly with the first job title. Absolutely DO NOT include any introductory phrases like "Rewritten Work Experience Section:" or any other headers in your output.
 
 **Rewritten Work Experience Section (Your output should be only the work experience text itself, formatted as per instruction 7):**
 """
 
-    # --- TECHNICAL SKILLS SECTION (MODIFIED AS PER YOUR REQUEST) ---
+    # --- TECHNICAL SKILLS SECTION (Preserved from your input) ---
     elif section == 'technical_skills':
         return f"""
 {base_prompt_intro}
@@ -244,9 +248,7 @@ The 'Technical Skills' section is critically important as it's often the first a
 
 **Rewritten Technical Skills Section (Your output should be only the skills text itself, precisely adhering to all instructions, especially length per line, number of categories, and the blend of JD-specific and core role skills for a Machine Learning professional):**
 """
-    # --- END MODIFIED TECHNICAL SKILLS ---
-
-    # --- PROJECTS SECTION (Preserved from your last version) ---
+    # --- PROJECTS SECTION (UPDATED AS PER YOUR REQUEST) ---
     elif section == 'projects':
         return f"""
 {base_prompt_intro}
@@ -256,7 +258,8 @@ The 'Technical Skills' section is critically important as it's often the first a
 2.  **Structure & Content for Each Project (NO SEPARATE TECH STACK LISTING):**
     * **Title:** Clearly state the project title. **Do NOT use markdown like '##' for project titles.** Optionally, you can add a brief, relevant tagline if it fits well (e.g., "| _NLP, RAG_").
     * **Bullet Points:** Provide **EXACTLY 2 bullet points** describing the project.
-    * **Character Limit per Bullet:** Each of these 2 bullet points **MUST BE STRICTLY UNDER 200 characters.**
+    * **Character Limit per Bullet:** Each of these 2 bullet points **MUST BE STRICTLY UNDER 170 characters** (aim for 140-160 characters).
+    * **Line Flow & Orphans:** Strive for each bullet point to be a single impactful line or, at most, two concise lines to enhance readability and avoid orphan words. Rephrase slightly if needed to ensure lines break cleanly, particularly if a bullet point extends to two lines, while adhering to the character limit.
     * Relevant technologies (especially from "ATS KEYWORDS" or "Key Requirements/Keywords from Job Description") should be naturally woven into the bullet point descriptions if they are key to the achievement and space permits. Do not list a separate "Tech Stack:" line.
 3.  **Bullet Point Content (Problem, Action, Result - within constraints):**
     * Focus on problem solved, key actions taken, specific technologies used, and quantifiable results or significant outcomes.
@@ -266,12 +269,12 @@ The 'Technical Skills' section is critically important as it's often the first a
 5.  **Relevance:** Emphasize aspects of the project most relevant to the target job "{job_title}" and its associated "ATS KEYWORDS".
 6.  **No Fabrication:** DO NOT invent details, technologies, or outcomes not supported by the original project descriptions.
 7.  **Output Format:** Provide ONLY the rewritten project descriptions, starting directly with the first project title. Absolutely DO NOT include any introductory phrases like "Rewritten Projects Section:" or any other "##" headers or markdown for individual project titles in your output.
-8.  {one_page_constraint_reminder} 
+8.  {one_page_constraint_reminder}
 
 **Rewritten Projects Section (Your output should be only the projects text itself, with each project formatted as per instruction 2):**
 """
-    # --- FALLBACK (Preserved from your last version) ---
-    else: 
+    # --- FALLBACK (Preserved from your input) ---
+    else:
         logging.warning(f"Received unhandled section type: '{section}' in get_section_prompt. Using a generic refinement prompt.")
         return f"""
 You are an expert resume writer. Review the following resume section based on the target job description.
