@@ -384,8 +384,8 @@ def extract_linkedin_job_page_details(job_url):
 def scrape_jobright_platform(scraper_cfg, platform_logger, seen_job_ids_globally):
     platform_logger.info(f"Jobright: Starting scraping for: {scraper_cfg.get('search_name')}")
 
-    # jr_username = scraper_cfg.get("username") # This is how you get it from config
-    # jr_password = scraper_cfg.get("password")
+    jr_username = scraper_cfg.get("username") # This is how you get it from config
+    jr_password = scraper_cfg.get("password")
     jr_profile_dir = scraper_cfg.get("profile_dir") # This is USER_DATA_PROFILE_DIR_JOBRIGHT_GLOBAL from your config
 
     newly_detailed_jobs_for_jobright = []
