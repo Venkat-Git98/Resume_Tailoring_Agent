@@ -425,9 +425,11 @@ def scrape_jobright_platform(scraper_cfg, platform_logger, seen_job_ids_globally
 
     driver = None
     try:
-        service = ChromeService(executable_path=ChromeDriverManager().install())
+        service = ChromeService(executable_path=ChromeDriverManager(chrome_type=ChromeType.CHROMIUM).install())
         driver = webdriver.Chrome(service=service, options=options)
-        driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+        # service = ChromeService(executable_path=ChromeDriverManager().install())
+        # driver = webdriver.Chrome(service=service, options=options)
+        # driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         # # MODIFY THIS LINE: Tell ChromeDriverManager to use ChromeType.CHROMIUM
         # service = ChromeService(executable_path=ChromeDriverManager(chrome_type=ChromeType.CHROMIUM).install())
         # driver = webdriver.Chrome(service=service, options=options)
