@@ -368,46 +368,8 @@ def extract_linkedin_job_page_details(job_url):
 
 # In Resume_Tailoring/Scrapping/scrape.py
 
-# In Resume_Tailoring/Scrapping/scrape.py
-
-# Ensure these imports are at the top of your scrape.py file
-import os
-import time
-import random 
-import re 
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service as ChromeService
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from webdriver_manager.chrome import ChromeDriverManager
-from selenium.common.exceptions import (
-    TimeoutException, NoSuchElementException,
-    StaleElementReferenceException, ElementClickInterceptedException
-)
-from selenium.webdriver.common.action_chains import ActionChains 
-from selenium.webdriver.common.keys import Keys 
-# ... your other imports from the main scrape.py ...
 
 
-# Ensure these imports are at the top of your scrape.py file if not already present for Jobright:
-# import os
-# import time
-# import traceback
-# from selenium import webdriver
-# from selenium.webdriver.chrome.service import Service as ChromeService
-# from selenium.webdriver.common.by import By
-# from selenium.webdriver.support.ui import WebDriverWait
-# from selenium.webdriver.support import expected_conditions as EC
-# from webdriver_manager.chrome import ChromeDriverManager
-# from selenium.common.exceptions import (
-#     TimeoutException, NoSuchElementException,
-#     StaleElementReferenceException, ElementClickInterceptedException
-# )
-# from selenium.webdriver.common.action_chains import ActionChains
-# from selenium.webdriver.common.keys import Keys
-# import datetime # For scraped_timestamp
-# import re # If parse_job_id_for_platform uses it, or for other formatting
 
 # THIS IS THE NEW FUNCTION TO REPLACE THE OLD scrape_jobright_platform
 def scrape_jobright_platform(scraper_cfg, platform_logger, seen_job_ids_globally):
@@ -450,9 +412,13 @@ def scrape_jobright_platform(scraper_cfg, platform_logger, seen_job_ids_globally
     options.add_experimental_option('useAutomationExtension', False)
     options.add_argument(f'user-agent={USER_AGENT}') # USER_AGENT from scrape.py globals
 
+    # ADD/MODIFY THIS LINE: Explicitly set the binary location
+    options.binary_location = "/usr/bin/chromium-browser"
+
     driver = None
     try:
-        service = ChromeService(executable_path='/usr/bin/chromedriver')#ChromeService(executable_path=ChromeDriverManager().install())
+        # MODIFY THIS LINE: Tell ChromeDriverManager to use ChromeType.CHROMIUM
+        service = ChromeService(executable_path=ChromeDriverManager(chrome_type=ChromeType.CHROMIUM).install())
         driver = webdriver.Chrome(service=service, options=options)
         # driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})") # From previous version
 
