@@ -61,7 +61,15 @@ logging.info(f"Scraper logging configured. Log file: {LOG_FILE_SCRAPER}")
 logging.info(f"Project root for imports: {project_root}")
 logging.info(f"Current sys.path: {sys.path}")
 
+# SET WebDriver Manager logger to DEBUG specifically
+wdm_logger = logging.getLogger("webdriver_manager")
+wdm_logger.setLevel(logging.DEBUG)
 
+# Set other verbose loggers to WARNING if you prefer
+logging.getLogger("selenium.webdriver.remote.remote_connection").setLevel(logging.WARNING)
+logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
+
+logging.info(f"Scraper logging configured. Log file: {LOG_FILE_SCRAPER}")
 # --- Resume Tailoring Project Imports ---
 app_config = None
 try:
