@@ -415,7 +415,7 @@ def scrape_jobright_platform(scraper_cfg, platform_logger, seen_job_ids_globally
     options.add_argument('--v=1') # For verbosity level 1
 
     # Ensure Selenium knows where the browser executable is (installed by apt)
-    options.binary_location = "/usr/bin/chromium-browser"
+    options.binary_location = "/usr/bin/chromium"
 
     driver = None
     # Define a path for chromedriver service log for easier retrieval
