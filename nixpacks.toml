@@ -1,30 +1,33 @@
 # nixpacks.toml
 
-# Remove any 'providers = ["python@..."]' line if it caused issues,
-# or use a .python-version file in your repo root (e.g., with "3.12.3") for Python version.
+# If you need a specific Python version, consider adding a .python-version file
+# in your repo root with "3.12.x" instead of using the 'providers' key here,
+# as that was causing parsing issues earlier.
+# For now, let Python auto-detection work.
 
 [phases.setup]
   aptPkgs = [
-    "chromium-browser",
-    "curl", "unzip",       # Utilities needed by your install_chromedriver.sh script
-    # ... (your existing list of essential libraries for chromium-browser) ...
+    "chromium-browser",       # The browser
+    "chromium-chromedriver",  # The compatible WebDriver for it, from apt
+    # Essential libraries (your existing comprehensive list is good)
+    "curl", "unzip", "jq",   # Keep curl/unzip/jq just in case for other needs or future scripts
     "libglib2.0-0", "libnss3", "libfontconfig1", "libx11-6", "libxcb1",
     "libxcomposite1", "libxrandr2", "libxrender1", "libxtst6", "ca-certificates",
     "fonts-liberation", "libasound2t64", "libatk-bridge2.0-0", "libatk1.0-0",
     "libcups2", "libdbus-1-3", "libgdk-pixbuf2.0-0", "libgtk-3-0",
     "libpango-1.0-0", "libpangocairo-1.0-0", "xdg-utils"
   ]
+  # No 'cmds' needed here for chromedriver installation if apt handles it.
+  # You can add simple echo commands here for debugging if needed.
   cmds = [
-    "echo 'SETUP_CMDS: Making install_chromedriver.sh executable...'",
-    # Nixpacks copies your repo to /app. If install_chromedriver.sh is in your repo root,
-    # it will be at /app/install_chromedriver.sh in the build container.
-    "chmod +x ./install_chromedriver.sh",  # Make sure it's executable
-    "echo 'SETUP_CMDS: Running install_chromedriver.sh script...'",
-    "./install_chromedriver.sh"           # Execute the script
+    "echo 'SETUP_CMDS: aptPkgs will install chromium-browser and chromium-chromedriver.'"
+    # Optional: command to find where apt installed chromedriver, for confirmation:
+    # "echo 'Searching for chromedriver installed by apt...'",
+    # "dpkg -L chromium-chromedriver | grep /bin/chromedriver || echo 'chromedriver not found in typical dpkg locations'"
   ]
 
 [phases.install]
-  # Your Python dependencies installation
+  # Default pip install command for your Python requirements
   cmds = ["python -m venv --copies /opt/venv && . /opt/venv/bin/activate && pip install -r requirements.txt"]
 
 [start]

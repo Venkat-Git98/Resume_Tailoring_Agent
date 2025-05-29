@@ -425,7 +425,19 @@ def scrape_jobright_platform(scraper_cfg, platform_logger, seen_job_ids_globally
 
     driver = None
     try:
-        service = ChromeService(executable_path="/usr/local/bin/chromedriver")#service = ChromeService(executable_path=ChromeDriverManager(chrome_type=ChromeType.CHROMIUM).install())
+         # Path to chromedriver installed by apt's chromium-chromedriver package
+        # This is the most common path.
+        chromedriver_executable_path = "/usr/bin/chromedriver"
+        
+        # As a fallback, sometimes it might be here, but /usr/bin/chromedriver is more standard for the package.
+        # import os
+        # if not os.path.exists(chromedriver_executable_path):
+        #     platform_logger.warning(f"Chromedriver not found at {chromedriver_executable_path}, trying /usr/lib/chromium-browser/chromedriver")
+        #     chromedriver_executable_path = "/usr/lib/chromium-browser/chromedriver"
+
+        platform_logger.info(f"Jobright: Using system-installed chromedriver from apt package, expected at {chromedriver_executable_path}")
+        
+        service = ChromeService(executable_path=chromedriver_executable_path)
         driver = webdriver.Chrome(service=service, options=options)
         # service = ChromeService(executable_path=ChromeDriverManager().install())
         # driver = webdriver.Chrome(service=service, options=options)
