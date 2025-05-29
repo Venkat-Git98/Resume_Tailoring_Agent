@@ -40,3 +40,6 @@
     "libpangocairo-1.0-0",
     "xdg-utils"
   ]
+[start]
+  # This command will print the version and then exit.
+  cmd = "/usr/bin/chromium-browser --version && echo 'Chromium version was printed above. Exiting diagnostic mode.' && exit 0"
