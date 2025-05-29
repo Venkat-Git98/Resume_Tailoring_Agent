@@ -1,11 +1,11 @@
 # nixpacks.toml
 
-[phases.install]
+#[phases.install]
 # This command will run *before* Nixpacks tries to install your requirements.txt
-cmds_prepend = ["python -m pip install --upgrade pip setuptools wheel"]
+#cmds_prepend = ["python -m pip install --upgrade pip setuptools wheel"]
 # In your nixpacks.toml
-[start]
-  cmd = "/usr/bin/chromium-browser --version && echo 'Chromium version printed above. Exiting for diagnostics.' && exit 0"
+#[start]
+  cmd = "/usr/bin/chromium-browser --version && echo 'Chromium version printed above. Sleeping for 5 minutes...' && sleep 300"
 
 [phases.setup]
   aptPkgs = [
