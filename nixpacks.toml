@@ -4,9 +4,20 @@
 # This command will run *before* Nixpacks tries to install your requirements.txt
 #cmds_prepend = ["python -m pip install --upgrade pip setuptools wheel"]
 # In your nixpacks.toml
-#[start]
-  cmd = "/usr/bin/chromium-browser --version && echo 'Chromium version printed above. Sleeping for 5 minutes...' && sleep 300"
-
+[start]
+  # This command attempts to get the version, log it, and keep the container alive.
+  cmd = "sh -c 'echo \"NIXPACKS_START_CMD: Attempting to get Chromium version...\" && \
+              if [ -f /usr/bin/chromium-browser ]; then \
+                echo \"NIXPACKS_START_CMD: /usr/bin/chromium-browser found.\"; \
+                /usr/bin/chromium-browser --version > /tmp/chromium_version.txt 2>&1; \
+                echo \"NIXPACKS_START_CMD: Output of version command (if any):\"; \
+                cat /tmp/chromium_version.txt; \
+                echo \"NIXPACKS_START_CMD: Chromium version check complete. Content of /tmp/chromium_version.txt printed above.\"; \
+              else \
+                echo \"NIXPACKS_START_CMD: ERROR - /usr/bin/chromium-browser NOT FOUND.\"; \
+              fi && \
+              echo \"NIXPACKS_START_CMD: Diagnostic finished. Sleeping for 300 seconds to allow log inspection...\" && \
+              sleep 300'"
 [phases.setup]
   aptPkgs = [
     # Use Chromium browser and its chromedriver from Ubuntu's repositories
@@ -40,6 +51,6 @@
     "libpangocairo-1.0-0",
     "xdg-utils"
   ]
-[start]
+#[start]
   # This command will print the version and then exit.
-  cmd = "/usr/bin/chromium-browser --version && echo 'Chromium version was printed above. Exiting diagnostic mode.' && exit 0"
+  #cmd = "/usr/bin/chromium-browser --version && echo 'Chromium version was printed above. Exiting diagnostic mode.' && exit 0"
