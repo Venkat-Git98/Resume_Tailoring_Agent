@@ -9,48 +9,63 @@
     "libcups2", "libdbus-1-3", "libgdk-pixbuf2.0-0", "libgtk-3-0",
     "libpango-1.0-0", "libpangocairo-1.0-0", "xdg-utils"
   ]
-  [phases.setup]
-  # ... (aptPkgs definition as above) ...
+[phases.setup]
+  aptPkgs = [
+    "chromium-browser",
+    "curl", "unzip", "jq", # jq can be useful for more advanced CfT JSON parsing if needed later
+    "libglib2.0-0", "libnss3", "libfontconfig1", "libx11-6", "libxcb1",
+    "libxcomposite1", "libxrandr2", "libxrender1", "libxtst6", "ca-certificates",
+    "fonts-liberation", "libasound2t64", "libatk-bridge2.0-0", "libatk1.0-0",
+    "libcups2", "libdbus-1-3", "libgdk-pixbuf2.0-0", "libgtk-3-0",
+    "libpango-1.0-0", "libpangocairo-1.0-0", "xdg-utils"
+  ]
   cmds = [
     "echo 'SETUP_CMDS: Starting manual Chromedriver installation...'",
-    # !!! USER ACTION: Replace this URL with a CORRECT and CURRENT download URL for a recent stable linux64 chromedriver !!!
-    # Get it from: https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json
-    # Example URL for version 125.0.6422.76 (VERIFY THIS IS STILL CURRENT OR CHOOSE LATEST STABLE):
+    
+    # ----------------------------------------------------------------------------------
+    # !!! CRITICAL USER ACTION: REPLACE THE URL BELOW WITH A VALID CHROMEDRIVER URL !!!
+    # 1. Go to: https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json
+    # 2. Find a recent "Stable" version (e.g., for Chrome/Chromium 125, 126, or newer).
+    # 3. Under that version, find: "downloads" -> "chromedriver" -> array.
+    # 4. In that array, find the object where "platform" is "linux64".
+    # 5. Copy the "url" value from that object.
+    # Example (this URL might be outdated or specific, VERIFY AND REPLACE IT):
     "CHROMEDRIVER_URL='https://storage.googleapis.com/chrome-for-testing-public/125.0.6422.76/linux64/chromedriver-linux64.zip'",
+    # ----------------------------------------------------------------------------------
     
-    "echo \"SETUP_CMDS: Downloading Chromedriver from ${CHROMEDRIVER_URL}...\"",
-    # Using curl with flags to show errors and fail on error
-    "curl --silent --show-error --location --fail -o /tmp/chromedriver_linux64.zip \"${CHROMEDRIVER_URL}\"",
-    "if [ $? -ne 0 ]; then echo 'SETUP_CMDS: FATAL ERROR - Chromedriver download failed. Check URL and network.'; exit 1; fi",
+    "echo \"SETUP_CMDS: Downloading Chromedriver from URL: ${CHROMEDRIVER_URL}\"",
+    # Curl with flags: -s (silent), -S (show error), -L (follow redirects), -f (fail on server error), -o (output)
+    "curl -sSLf -o /tmp/chromedriver_linux64.zip \"${CHROMEDRIVER_URL}\"",
+    "if [ $? -ne 0 ]; then echo 'SETUP_CMDS: FATAL ERROR - Chromedriver download failed. Verify URL and network.'; exit 1; fi",
     
-    "echo 'SETUP_CMDS: Unzipping Chromedriver to /tmp/chromedriver_extracted_temp ...'",
-    "sudo unzip -o /tmp/chromedriver_linux64.zip -d /tmp/chromedriver_extracted_temp",
-    "if [ $? -ne 0 ]; then echo 'SETUP_CMDS: FATAL ERROR - Chromedriver unzip failed.'; ls -l /tmp; exit 1; fi",
+    "echo 'SETUP_CMDS: Unzipping Chromedriver to /tmp/chromedriver_extracted_temp'",
+    "sudo unzip -o /tmp/chromedriver_linux64.zip -d /tmp/chromedriver_extracted_temp", # -o to overwrite if exists
+    "if [ $? -ne 0 ]; then echo 'SETUP_CMDS: FATAL ERROR - Chromedriver unzip failed.'; sudo ls -l /tmp; exit 1; fi",
     
-    "echo 'SETUP_CMDS: Searching for chromedriver executable in extracted files...'",
-    # Find the chromedriver executable, robust to it being in a subdirectory (like chromedriver-linux64) or at the root
-    "CHROME_DRIVER_EXECUTABLE_PATH=$(sudo find /tmp/chromedriver_extracted_temp -name chromedriver -type f -print -quit)",
-    
-    "if [ -n \"${CHROME_DRIVER_EXECUTABLE_PATH}\" ]; then \
-        echo \"SETUP_CMDS: Found chromedriver executable at ${CHROME_DRIVER_EXECUTABLE_PATH}\"; \
-        echo \"SETUP_CMDS: Moving to /usr/local/bin/chromedriver and setting permissions...\"; \
-        sudo mv \"${CHROME_DRIVER_EXECUTABLE_PATH}\" /usr/local/bin/chromedriver; \
-        sudo chmod +x /usr/local/bin/chromedriver; \
-        echo 'SETUP_CMDS: Chromedriver moved and permissions set.'; \
-     else \
-        echo 'SETUP_CMDS: FATAL ERROR - chromedriver executable NOT FOUND in extracted files!'; \
-        echo 'SETUP_CMDS: Listing contents of /tmp/chromedriver_extracted_temp/ for debugging:'; \
-        sudo ls -lR /tmp/chromedriver_extracted_temp; \
-        exit 1; \
-     fi",
+    "echo 'SETUP_CMDS: Searching for chromedriver executable...'",
+    # This command string uses triple quotes for TOML multi-line basic string.
+    # The script inside the 'sh -c' uses newlines for shell command separation.
+    """sh -c '
+        CHROME_DRIVER_EXE_PATH_IN_ZIP=$(find /tmp/chromedriver_extracted_temp -name chromedriver -type f -print -quit)
+        if [ -n "${CHROME_DRIVER_EXE_PATH_IN_ZIP}" ]; then
+            echo "SETUP_CMDS: Found chromedriver executable at ${CHROME_DRIVER_EXE_PATH_IN_ZIP}"
+            echo "SETUP_CMDS: Moving to /usr/local/bin/chromedriver and setting permissions..."
+            sudo mv "${CHROME_DRIVER_EXE_PATH_IN_ZIP}" /usr/local/bin/chromedriver
+            sudo chmod +x /usr/local/bin/chromedriver
+            echo "SETUP_CMDS: Chromedriver moved and permissions set."
+        else
+            echo "SETUP_CMDS: FATAL ERROR - chromedriver executable NOT FOUND in extracted files!"
+            echo "SETUP_CMDS: Listing contents of /tmp/chromedriver_extracted_temp/ for debugging:"
+            sudo ls -lR /tmp/chromedriver_extracted_temp
+            exit 1
+        fi
+    '""",
     
     "rm -rf /tmp/chromedriver_extracted_temp /tmp/chromedriver_linux64.zip",
     "echo 'SETUP_CMDS: Chromedriver manual installation process complete. Verifying installation:'",
-    # This verification is crucial. It should print the version of the manually installed chromedriver.
+    # This command will show the version of the installed chromedriver
     "/usr/local/bin/chromedriver --version"
   ]
-
-
 [phases.install]
   # Default pip install command for your Python requirements
   cmds = ["python -m venv --copies /opt/venv && . /opt/venv/bin/activate && pip install -r requirements.txt"]
