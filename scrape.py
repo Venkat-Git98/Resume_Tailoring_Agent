@@ -400,7 +400,7 @@ def scrape_jobright_platform(scraper_cfg, platform_logger, seen_job_ids_globally
     jr_username = scraper_cfg.get("username") # This is how you get it from config
     jr_password = scraper_cfg.get("password")
     jr_profile_dir = scraper_cfg.get("profile_dir") # This is USER_DATA_PROFILE_DIR_JOBRIGHT_GLOBAL from your config
-
+    target_job_count = scraper_cfg.get("target_job_count", 10)
     newly_detailed_jobs_for_jobright = []
 
     options = webdriver.ChromeOptions()
