@@ -452,7 +452,7 @@ def scrape_jobright_platform(scraper_cfg, platform_logger, seen_job_ids_globally
 
     driver = None
     try:
-        service = ChromeService(executable_path=ChromeDriverManager().install())
+        service = ChromeService(executable_path='/usr/bin/chromedriver')#ChromeService(executable_path=ChromeDriverManager().install())
         driver = webdriver.Chrome(service=service, options=options)
         # driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})") # From previous version
 
