@@ -6,7 +6,7 @@ pydantic
 vertexai>=0.1.0
 python-docx
 selenium
-webdriver-manager
+webdriver-manager>=4.0.0
 sib-api-v3-sdk
 requests
 beautifulsoup4

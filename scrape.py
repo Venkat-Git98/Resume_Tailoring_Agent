@@ -35,7 +35,7 @@ from selenium.common.exceptions import (
 )
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.keys import Keys
-from webdriver_manager.core.utils import ChromeType # For specifying chromium
+from webdriver_manager.core.os_manager import ChromeType # For specifying chromium
 
 # --- Logging Configuration (Setup early) ---
 LOG_FILE_SCRAPER = "combined_job_scraper.log"
