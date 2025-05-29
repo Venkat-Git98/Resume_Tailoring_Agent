@@ -1265,7 +1265,7 @@ def run_all_scrapers_and_process():
                     # --- CONSTRUCT THE NEW EMAIL SUBJECT ---
                     date_str = CURRENT_DAY_TRACKER.strftime("%Y-%m-%d")
                     original_subject_base = f"Application: {tailored_artifacts.get('job_title')} at {tailored_artifacts.get('company_name', 'N/A')}"
-                    email_subject = f"Job Apps {date_str} - Run {DAILY_RUN_COUNTER} - {original_subject_base}"
+                    email_subject = f"Job Apps {date_str} - Run {DAILY_RUN_COUNTER} "#- {original_subject_base}"
                     # --- END SUBJECT CONSTRUCTION ---
 
                     email_body_parts = [
