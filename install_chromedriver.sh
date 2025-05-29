@@ -8,7 +8,7 @@ echo "INSTALL_SCRIPT: Starting Chromedriver installation..."
 # 2. Find a recent "Stable" version (e.g., for Chrome/Chromium 125 or 126).
 # 3. Copy the URL for the "chromedriver" -> "linux64" download.
 # Example (this URL will likely be outdated or specific, VERIFY AND REPLACE IT):
-CHROMEDRIVER_URL="https://storage.googleapis.com/chrome-for-testing-public/125.0.6422.76/linux64/chromedriver-linux64.zip"
+CHROMEDRIVER_URL="https://storage.googleapis.com/chrome-for-testing-public/139.0.7206.2/linux64/chrome-headless-shell-linux64.zip" #"https://storage.googleapis.com/chrome-for-testing-public/125.0.6422.76/linux64/chromedriver-linux64.zip"
 
 echo "INSTALL_SCRIPT: Downloading Chromedriver from ${CHROMEDRIVER_URL}..."
 # Using curl with flags: -s (silent), -S (show error), -L (follow redirects), -f (fail on server error), -o (output)
