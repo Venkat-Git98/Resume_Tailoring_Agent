@@ -422,25 +422,15 @@ def scrape_jobright_platform(scraper_cfg, platform_logger, seen_job_ids_globally
     chromedriver_log_path = "/tmp/chromedriver_service.log" # Using /tmp which is usually writable
 
     try:
-        chromedriver_executable_path = "/usr/bin/chromedriver" # Path to chromedriver installed by apt
-        platform_logger.info(f"Jobright: Using system chromedriver from apt package, expected at {chromedriver_executable_path}")
-
-        # Enable verbose logging for the chromedriver service and output to a file.
-        service_args = [
-            '--verbose',
-            f'--log-path={chromedriver_log_path}'
-        ]
+        # --- CRITICAL for Docker ---
+        # The driver installed by 'apt install chromium-driver' is usually at /usr/bin/chromedriver
+        chromedriver_path = "/usr/bin/chromedriver"
+        # --- END CRITICAL ---
         
-        service = ChromeService(
-            executable_path=chromedriver_executable_path,
-            service_args=service_args
-        )
+        platform_logger.info(f"Jobright: Using system-installed chromedriver from apt, expected at {chromedriver_path}")
+        service = ChromeService(executable_path=chromedriver_path)
         
-        platform_logger.info(f"Jobright: Initializing webdriver.Chrome (chromedriver log: {chromedriver_log_path})...")
-        # This is line 436 in your recent traceback:
-        driver = webdriver.Chrome(service=service, options=options) 
-        platform_logger.info("Jobright: webdriver.Chrome initialized successfully!") # If you see this, it started!
-
+        driver = webdriver.Chrome(service=service, options=options)
         # Wait times from user's working standalone script
         wait = WebDriverWait(driver, 15)
         short_wait = WebDriverWait(driver, 7) 
