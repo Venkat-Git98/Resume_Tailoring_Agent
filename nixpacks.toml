@@ -1,0 +1,16 @@
+# nixpacks.toml
+
+[phases.install]
+# This command will run *before* Nixpacks tries to install your requirements.txt
+cmds_prepend = ["python -m pip install --upgrade pip setuptools wheel"]
+
+# Optional: If you later find that WeasyPrint or Shapely needs
+# system-level C libraries (like Pango, Cairo, GEOS), you might
+# need to specify them. This depends on the base environment
+# Railway/Nixpacks uses. For now, the command above should address
+# the current 'ImpImporter' error.
+# Example for system libraries if needed:
+# [phases.setup]
+# aptPkgs = ["libgeos-dev", "libpango-1.0-0", "libcairo2", "libpangocairo-1.0-0"]
+# Or for Nix-based environments:
+# nixPkgs = ["geos", "pango", "cairo"]
