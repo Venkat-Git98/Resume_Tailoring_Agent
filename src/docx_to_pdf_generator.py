@@ -254,6 +254,7 @@ def add_styled_paragraph(document, text: str, style_name: Optional[str] = None,
     if space_after is not None: p.paragraph_format.space_after = space_after
     if line_spacing is not None: p.paragraph_format.line_spacing = line_spacing
     if keep_with_next is not None: p.paragraph_format.keep_with_next = keep_with_next
+    p.paragraph_format.widow_control = True
     current_base_bold = is_bold if is_bold is not None else False
     current_base_italic = is_italic if is_italic is not None else False
     add_runs_with_markdown_bold(p, text, font_name, font_size,
@@ -276,6 +277,7 @@ def add_contact_info_docx(document, contact_data: Dict[str, str]):
     p_line1 = document.add_paragraph()
     p_line1.alignment = WD_ALIGN_PARAGRAPH.CENTER
     p_line1.paragraph_format.space_after = Pt(1)
+    p_line1.paragraph_format.widow_control = True
     current_font_name = 'Times New Roman'
     current_font_size = Pt(10)
 
@@ -298,6 +300,7 @@ def add_contact_info_docx(document, contact_data: Dict[str, str]):
     p_links = document.add_paragraph()
     p_links.alignment = WD_ALIGN_PARAGRAPH.CENTER
     p_links.paragraph_format.space_after = Pt(18)
+    p_links.paragraph_format.widow_control = True
     add_hyperlink(p_links, contact_data.get("linkedin_url", "#"), contact_data.get("linkedin_text", "linkedin.com"),
                   font_name=current_font_name, font_size=current_font_size, color_hex="0563C1", is_underline=True)
     run_sep1 = p_links.add_run(" | "); run_sep1.font.name = current_font_name; run_sep1.font.size = current_font_size
@@ -344,6 +347,7 @@ def add_work_experience_docx(document, work_experience_text: str):
 
         p_job_header = document.add_paragraph()
         p_job_header.paragraph_format.tab_stops.add_tab_stop(right_tab_stop, WD_ALIGN_PARAGRAPH.RIGHT)
+        p_job_header.paragraph_format.widow_control = True
         header_parts = lines[0].split('|')
         add_runs_with_markdown_bold(p_job_header, header_parts[0].strip(), 'Times New Roman', Pt(10), base_bold=True)
         if len(header_parts) > 1:
@@ -388,6 +392,7 @@ def add_technical_skills_docx(document, skills_text: str):
         if not category_line: continue
         p = document.add_paragraph()
         p.paragraph_format.space_after = Pt(2)
+        p.paragraph_format.widow_control = True
         parts = category_line.split(':', 1)
         if len(parts) == 2:
             add_runs_with_markdown_bold(p, parts[0].strip() + ": ", 'Times New Roman', Pt(10), base_bold=True)
@@ -427,6 +432,7 @@ def add_projects_docx(document, projects_text: str, contact_data: Dict[str, str]
         project_name_raw = re.sub(r"^\*\*(.*?)\*\*$", r"\1", title_parts[0].strip())
 
         p_title = document.add_paragraph()
+        p_title.paragraph_format.widow_control = True
         project_url = project_hyperlinks.get(project_name_raw)
         
         if project_url:
@@ -467,6 +473,7 @@ def add_education_docx(document, education_list: List[Dict[str, str]]):
     for edu_item in education_list:
         p_edu_line = document.add_paragraph()
         p_edu_line.paragraph_format.tab_stops.add_tab_stop(right_tab_stop, WD_ALIGN_PARAGRAPH.RIGHT)
+        p_edu_line.paragraph_format.widow_control = True
         degree_str = edu_item.get('degree_line', 'Degree N/A')
         uni_str = edu_item.get('university_line', 'University N/A')
         dates_str = edu_item.get("dates_line", "Dates N/A")
