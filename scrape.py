@@ -193,7 +193,20 @@ PDF_GENERATOR_SERVICE_ACCOUNT_CONFIGURED = bool(getattr(app_config, 'SERVICE_ACC
 llm_client_global = None
 orchestrator_agent_global = None
 tailoring_output_dir_global = None
+import subprocess
+import logging # Ensure logging is imported if you use platform_logger
 
+# At the very top of your script or before Selenium operations
+try:
+    # Check chromium-browser version
+    cp_browser = subprocess.run(['/usr/bin/chromium', '--version'], capture_output=True, text=True, check=False)
+    logging.info(f"DIAGNOSTIC: Chromium Browser Version: {cp_browser.stdout.strip() if cp_browser.stdout else 'Not found or error'} (stderr: {cp_browser.stderr.strip() if cp_browser.stderr else ''})")
+
+    # Check chromedriver version
+    cp_driver = subprocess.run(['/usr/bin/chromedriver', '--version'], capture_output=True, text=True, check=False)
+    logging.info(f"DIAGNOSTIC: Chromedriver Version: {cp_driver.stdout.strip() if cp_driver.stdout else 'Not found or error'} (stderr: {cp_driver.stderr.strip() if cp_driver.stderr else ''})")
+except Exception as e_diag_version:
+    logging.error(f"DIAGNOSTIC: Error getting browser/driver versions: {e_diag_version}")
 
 def load_jobs_from_file(filepath):
     try:
@@ -429,7 +442,11 @@ def scrape_jobright_platform(scraper_cfg, platform_logger, seen_job_ids_globally
         
         platform_logger.info(f"Jobright: Using system-installed chromedriver from apt, expected at {chromedriver_path}")
         service = ChromeService(executable_path=chromedriver_path)
-        
+        service_args = ['--verbose'] # This will send chromedriver logs to stderr
+        service = ChromeService(
+            executable_path="/usr/bin/chromedriver",
+            service_args=service_args
+        )
         driver = webdriver.Chrome(service=service, options=options)
         # Wait times from user's working standalone script
         wait = WebDriverWait(driver, 15)
