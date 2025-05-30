@@ -636,6 +636,12 @@ def generate_styled_resume_pdf(
 
     return generate_pdf_via_google_drive(document, output_pdf_directory, base_pdf_filename)
 
+# In Resume_Tailoring/src/docx_to_pdf_generator.py
+# Make sure all necessary imports like re, os, logging, Document, Pt, Inches, WD_ALIGN_PARAGRAPH, qn,
+# add_styled_paragraph, add_hyperlink, generate_pdf_via_google_drive are present at the top of your file.
+
+logger = logging.getLogger(__name__) # Ensure logger is defined
+
 def generate_cover_letter_pdf(
     cover_letter_body_text: str,
     contact_info: Dict[str, str],
@@ -650,13 +656,12 @@ def generate_cover_letter_pdf(
     document = Document()
 
     # --- Default Styles and Margins for Cover Letter ---
-    # (Your existing style setup, ensuring normal_style.paragraph_format.widow_control = True)
+    # (Your existing style setup from the previous corrected version, ensuring normal_style.paragraph_format.widow_control = True)
     normal_style = document.styles['Normal']
     normal_font = normal_style.font
     normal_font.name = 'Times New Roman'
     normal_font.size = Pt(11)
 
-    # Corrected block to remove theme font settings
     ct_style_rpr = normal_style.element.get_or_add_rPr()
     ct_style_fonts = ct_style_rpr.get_or_add_rFonts()
     theme_font_attributes = [
@@ -676,45 +681,33 @@ def generate_cover_letter_pdf(
     normal_style.paragraph_format.space_after = Pt(0)
     normal_style.paragraph_format.line_spacing = 1.15
     normal_style.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.LEFT
-    normal_style.paragraph_format.widow_control = True # IMPORTANT
+    normal_style.paragraph_format.widow_control = True
 
     for section_elm in document.sections:
         section_elm.left_margin = Inches(1)
         section_elm.right_margin = Inches(1)
-        section_elm.top_margin = Inches(0.75) # Adjusted top margin for letterhead
-        section_elm.bottom_margin = Inches(0.75) # Adjusted bottom margin
+        section_elm.top_margin = Inches(0.75) 
+        section_elm.bottom_margin = Inches(0.75)
 
-    # --- Create Traditional Letterhead Style Top Contact Block ---
+    # --- Create Traditional Letterhead Style Top Contact Block (Street Address Omitted) ---
     letterhead_font_name = 'Times New Roman'
-    letterhead_font_size = Pt(11) # Standard size for contact details
-    letterhead_name_font_size = Pt(14) # Slightly larger for the name
-    letterhead_alignment = WD_ALIGN_PARAGRAPH.LEFT # Or .CENTER or .RIGHT
+    letterhead_font_size = Pt(11) 
+    letterhead_name_font_size = Pt(14)
+    letterhead_alignment = WD_ALIGN_PARAGRAPH.LEFT # Or .CENTER or .RIGHT as you prefer
 
     # Candidate Name
     if contact_info.get("name"):
-        p_name = add_styled_paragraph(
+        add_styled_paragraph( # Assuming add_styled_paragraph sets widow_control
             document,
             contact_info["name"],
             font_name=letterhead_font_name,
             font_size=letterhead_name_font_size,
             is_bold=True,
             alignment=letterhead_alignment,
-            space_after=Pt(1) # Reduced space after name
-        )
-        # add_styled_paragraph should already set widow_control
-
-    # Street Address
-    if contact_info.get("street_address"):
-        add_styled_paragraph(
-            document,
-            contact_info["street_address"],
-            font_name=letterhead_font_name,
-            font_size=letterhead_font_size,
-            alignment=letterhead_alignment,
-            space_after=Pt(1) # Reduced space
+            space_after=Pt(1) 
         )
 
-    # City, State Zip
+    # City, State Zip (Street Address block is removed)
     if contact_info.get("city_state_zip"):
         add_styled_paragraph(
             document,
@@ -722,7 +715,7 @@ def generate_cover_letter_pdf(
             font_name=letterhead_font_name,
             font_size=letterhead_font_size,
             alignment=letterhead_alignment,
-            space_after=Pt(1) # Reduced space
+            space_after=Pt(1)
         )
 
     # Phone Number
@@ -734,7 +727,7 @@ def generate_cover_letter_pdf(
             font_name=letterhead_font_name,
             font_size=letterhead_font_size,
             alignment=letterhead_alignment,
-            space_after=Pt(1) # Reduced space
+            space_after=Pt(1)
         )
 
     # Email Address (Hyperlinked)
@@ -743,13 +736,13 @@ def generate_cover_letter_pdf(
         p_email_top = document.add_paragraph()
         p_email_top.alignment = letterhead_alignment
         p_email_top.paragraph_format.space_before = Pt(0)
-        p_email_top.paragraph_format.space_after = Pt(1) # Reduced space
+        p_email_top.paragraph_format.space_after = Pt(1)
         p_email_top.paragraph_format.widow_control = True
         add_hyperlink(p_email_top, f"mailto:{email_top}", email_top,
                       font_name=letterhead_font_name, font_size=letterhead_font_size,
                       color_hex="0563C1", is_underline=True)
 
-    # LinkedIn Profile (Hyperlinked) - Optional for letterhead, but common
+    # LinkedIn Profile (Hyperlinked)
     if contact_info.get("linkedin_url") and contact_info.get("linkedin_text"):
         p_linkedin_top = document.add_paragraph()
         p_linkedin_top.alignment = letterhead_alignment
@@ -759,13 +752,13 @@ def generate_cover_letter_pdf(
         add_hyperlink(p_linkedin_top, contact_info["linkedin_url"], contact_info["linkedin_text"],
                       font_name=letterhead_font_name, font_size=letterhead_font_size,
                       color_hex="0563C1", is_underline=True)
-    else: # Ensure there's still space if LinkedIn is omitted
+    else: 
         p_spacer = document.add_paragraph()
-        p_spacer.paragraph_format.space_after = Pt(18)
-
+        p_spacer.paragraph_format.space_after = Pt(18) # Ensure consistent spacing if LinkedIn is missing
 
     # --- Process the main body of the cover letter from LLM ---
-    # (This part remains the same as the previous version: stripping LLM signature, adding paragraphs)
+    # (This part remains the same: stripping LLM signature, adding paragraphs)
+    # ... (body_content_from_llm, closing_pattern, main_body_text, visual_paragraphs loop) ...
     body_content_from_llm = cover_letter_body_text
     candidate_name_from_contact = contact_info.get('name', 'Venkatesh Shanmugam')
     candidate_name_for_regex = re.escape(candidate_name_from_contact)
@@ -785,8 +778,11 @@ def generate_cover_letter_pdf(
         add_styled_paragraph(document, "[Cover letter body content was not generated or was stripped with the signature.]",
                              font_name='Times New Roman', font_size=Pt(11))
 
-    # --- Add Controlled Closing, Signature, and Contact Details ---
-    closing_font_name_sig = 'Times New Roman' # Renamed to avoid conflict if any
+
+    # --- Add Controlled Closing, Signature, and Contact Details (as refined previously) ---
+    # (This includes: Sincerely, blank line, Name, Phone, Email, GitHub, Portfolio)
+    # ... (The detailed closing block code from the previous full function response) ...
+    closing_font_name_sig = 'Times New Roman' 
     closing_font_size_sig = Pt(11)
 
     sincerely_p = document.add_paragraph("Sincerely,")
@@ -857,13 +853,11 @@ def generate_cover_letter_pdf(
         p_portfolio_cl_sig.paragraph_format.widow_control = True
         add_hyperlink(p_portfolio_cl_sig, contact_info["portfolio_url"], contact_info.get("portfolio_text", "Portfolio"),
                       font_name=closing_font_name_sig, font_size=closing_font_size_sig, color_hex="0563C1", is_underline=True)
-    # --- End of closing block to insert ---
-
 
     # --- Construct the base filename for the PDF ---
     candidate_last_name = contact_info.get("name", "Candidate").split()[-1] if contact_info.get("name") else "CL"
     company_str = re.sub(r'\W+', '', company_name) if company_name else "TargetCompany"
     base_pdf_filename = f"{filename_keyword}_{company_str}_{candidate_last_name}"
-    base_pdf_filename = re.sub(r'[^\w\.\-_]', '_', base_pdf_filename) # Sanitize
+    base_pdf_filename = re.sub(r'[^\w\.\-_]', '_', base_pdf_filename)
 
     return generate_pdf_via_google_drive(document, output_pdf_directory, base_pdf_filename)
