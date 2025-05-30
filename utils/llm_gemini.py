@@ -296,14 +296,7 @@ If this section is not typically valuable or seems irrelevant after considering 
 Output ONLY the refined section text itself or the omission recommendation. Do not include any other "##" headers, markdown backticks (```), or conversational text.
 """
 
-# get_cover_letter_prompt and get_resume_critique_prompt remain IDENTICAL 
-# to the version you provided in the prompt that had the f-string syntax error corrected.
-import logging
-from typing import Dict, List, Optional # Ensure List and Optional are imported
 
-# Make sure logging is configured in your main script or when this module is imported.
-# For example, at the top of llm_gemini.py or in the script that calls this:
-# logging.basicConfig(level=logging.INFO) # Or your preferred level
 
 def get_cover_letter_prompt(
     candidate_name: str,
@@ -346,10 +339,10 @@ def get_cover_letter_prompt(
     project_context_for_cl = ""
     if project_details_for_cl:
         project_lines = [
-            f"- Project: {proj.get('title', 'N/A')}" + (f" (Demo: {proj.get('url')})" if proj.get('url') else "")
+            f"- Project: {proj.get('title', 'N/A')}" + (f" (Context: Has Demo URL - {proj.get('url')})" if proj.get('url') else " (Context: No Demo URL provided)")
             for proj in project_details_for_cl
         ]
-        if project_lines: project_context_for_cl = "\n\n--- KEY PROJECT DETAILS (for your reference if mentioning projects; includes Demo URLs if available) ---\n" + "\n".join(project_lines) + "\n--- END KEY PROJECT DETAILS ---"
+        if project_lines: project_context_for_cl = "\n\n--- KEY PROJECT DETAILS (for your reference if mentioning projects; DO NOT insert these URLs into the cover letter body) ---\n" + "\n".join(project_lines) + "\n--- END KEY PROJECT DETAILS ---"
 
     prompt = f"""
 You are an expert career strategist and an exceptionally skilled cover letter writer, renowned for crafting compelling narratives that captivate recruiters in seconds.
@@ -392,9 +385,9 @@ Your task is to write a highly personalized, impactful, and human-written one-pa
         * **Elaborate on Achievements:** Select 1-2 distinct and significant achievements or experiences from the CANDIDATE INFORMATION. For each, elaborate on the situation, your specific actions/contributions, the skills/technologies utilized, and the quantifiable results or impact.
         * **Explicitly connect your experience:** Draw these specific examples, achievements, and skills directly from the "CANDIDATE INFORMATION" provided above (Master Profile, Tailored Resume Summary, Work Experience, Projects).
         * **Targeted Relevance:** For each example, clearly demonstrate how it aligns with 2-3 of the most critical "Key Job Requirements Summary" or "Key ATS Keywords." Do not just list skills; show impact and results.
-        * **Integrate Online Presence & Project URLs:**
-            * Subtly weave in references to professional online presence where relevant (e.g., "as demonstrated on my GitHub profile," or "further detailed on my LinkedIn.").
-            * **Project URL Handling (CRITICAL):** If you discuss a project for which a 'Demo' URL is provided in the 'KEY PROJECT DETAILS' section of this prompt (e.g., '(Demo: http://example.com)'), you MUST incorporate that specific URL directly and naturally into the sentence. For example: '...as demonstrated in my XYZ Demo project (http://example.com)...' or '...details of which can be found at http://example.com.' **DO NOT use the placeholder phrase '[Project URL...]' or similar placeholders in your output; use the actual URL if provided within the KEY PROJECT DETAILS for that project.** If no URL is in KEY PROJECT DETAILS for a mentioned project, then simply describe the project without a URL placeholder or mentioning a URL.
+        * **Online Presence & Project Mentions:**
+            * You can subtly weave in references to professional online presence like GitHub or LinkedIn when generally discussing your profile (e.g., "as further detailed on my LinkedIn profile" or "my work on various projects, available on my GitHub, demonstrates...").
+            * **Mentioning Projects (CRITICAL):** You can and should discuss relevant projects from the 'KEY PROJECT DETAILS' or other candidate information. However, **DO NOT include any URLs (like 'http://...' or 'www...') for these specific projects directly in the body of the cover letter.** You can state that project details are available (e.g., 'details of which can be found in my portfolio' or 'as demonstrated in my work on the XYZ project'), but do not attempt to insert HTTP links or placeholders like '[Project URL]' for specific projects within your generated text.
         * **Company Focus (Decision Point):**
             * If '{company_name}' is a specific company name (not a generic placeholder like "Hiring Team" or "The Company"), weave in 1-2 brief, genuine points about your interest in *that specific company* (e.g., its mission, values, a recent project, or how it aligns with your career goals). This shows you've done your research.
             * If '{company_name}' seems like a generic placeholder, focus more on your fit for the role type and industry, and your general enthusiasm for such opportunities.
@@ -417,6 +410,7 @@ Your task is to write a highly personalized, impactful, and human-written one-pa
     * Avoid clichés (e.g., "I am a hardworking team player"). Show, don't just tell.
     * Do NOT make up information or skills not present in the provided candidate information.
     * Do NOT include your own headers like "Cover Letter:" or "Dear {salutation_address}," if the salutation is already handled by the structure above. Start directly with the salutation if appropriate for a standard letter body.
+    * **CRITICALLY AVOID:** Do not insert any URLs for specific projects (e.g., 'http://...', 'www...') or placeholders like '[Project URL]' within the body paragraphs when discussing projects.
 
 **OUTPUT FORMAT:**
 Provide ONLY the text of the cover letter, formatted as a standard business letter. This includes the salutation, the body paragraphs, and the closing (formatted as specified above). Do not add any other explanations, titles, or text before or after the cover letter itself.

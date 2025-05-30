@@ -56,6 +56,9 @@ DEFAULT_TAILORED_JSON_PATH = os.path.join(DEFAULT_PDF_OUTPUT_DIR, TAILORED_JSON_
 # --- Predefined Profile Information for DOCX/PDF Generation ---
 PREDEFINED_CONTACT_INFO = {
     "name": "Venkatesh Shanmugam", 
+    "location_city_state": "Virginia US", # Example of separating
+    "email": "svenkatesh.js@gmail.com",   # Explicit email
+    "phone": "+1 (703) 216-2540",  
     "line1_info": "Virginia US | svenkatesh.js@gmail.com | +1 (703) 216-2540", 
     "linkedin_text": "LinkedIn", 
     "linkedin_url": "https://www.linkedin.com/in/svenkatesh-js/", 
