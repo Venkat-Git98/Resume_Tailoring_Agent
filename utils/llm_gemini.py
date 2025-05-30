@@ -298,6 +298,12 @@ Output ONLY the refined section text itself or the omission recommendation. Do n
 
 
 
+import logging
+from typing import Dict, List, Optional
+
+# Ensure logging is configured (e.g., in your main script or at the top of llm_gemini.py)
+# logging.basicConfig(level=logging.INFO) # Or your preferred level
+
 def get_cover_letter_prompt(
     candidate_name: str,
     candidate_contact_info: Dict[str, str],
@@ -313,6 +319,7 @@ def get_cover_letter_prompt(
     project_details_for_cl: Optional[List[Dict[str,str]]] = None
 ) -> str:
     logging.info("Generating detailed prompt for cover letter generation.")
+
     contact_info_str = f"Candidate Email: {candidate_contact_info.get('email', 'N/A')}\n"
     if candidate_contact_info.get('phone'):
         contact_info_str += f"Candidate Phone: {candidate_contact_info.get('phone')}\n"
@@ -333,69 +340,79 @@ def get_cover_letter_prompt(
         profile_source_text += f"\n\n--- CANDIDATE'S TAILORED PROJECTS (Key projects and contributions) ---\n{tailored_projects_text}\n--- END PROJECTS ---"
 
     if not profile_source_text:
-        profile_source_text = "\nCandidate information seems to be missing or incomplete."
+        profile_source_text = "\nCandidate information (Master Profile, Tailored Resume sections) seems to be missing or incomplete. Base your writing on any available details."
 
     salutation_address = hiring_manager_name if hiring_manager_name else f"Hiring Team at {company_name}"
+
     project_context_for_cl = ""
     if project_details_for_cl:
         project_lines = [
-            f"- Project: {proj.get('title', 'N/A')}" + (f" (Context: Has Demo URL - {proj.get('url')})" if proj.get('url') else " (Context: No Demo URL provided)")
+            f"- Project: {proj.get('title', 'N/A')}" + (f" (Context: Has Demo URL - {proj.get('url')})" if proj.get('url') else " (Context: No Demo URL provided for this project)")
             for proj in project_details_for_cl
         ]
-        if project_lines: project_context_for_cl = "\n\n--- KEY PROJECT DETAILS (for your reference if mentioning projects; DO NOT insert these URLs into the cover letter body) ---\n" + "\n".join(project_lines) + "\n--- END KEY PROJECT DETAILS ---"
+        if project_lines:
+            project_context_for_cl = "\n\n--- KEY PROJECT DETAILS (For your reference if mentioning projects. DO NOT insert any project URLs from here into the cover letter body itself.) ---\n" + "\n".join(project_lines) + "\n--- END KEY PROJECT DETAILS ---"
+
+    # Keyword Bolding Instruction for Cover Letter
     cover_letter_bolding_instruction = """
-**Keyword Bolding:** Within the body paragraphs of the cover letter you generate, identify 2-4 of the most impactful keywords, phrases, or specific skills (especially those aligning with the 'Key Job Requirements Summary' or 'Key ATS Keywords' provided for the target role) and enclose them in double asterisks. For example: 'My experience with **Retrieval-Augmented Generation** and **deploying scalable ML solutions** directly addresses your needs.' Do not bold generic phrases, full sentences, or parts of the salutation/closing. The bolding should emphasize specific, high-value terms.
+**Keyword Bolding Guidance:** Throughout the body paragraphs of the cover letter, identify and emphasize 2-4 of the most impactful and relevant keywords, technical skills, or specific experiences that directly align with the 'Key Job Requirements Summary' or 'Key ATS Keywords' for the target role. Enclose these selected terms in double asterisks (e.g., 'My experience with **machine learning algorithms** and **cloud platforms like AWS** makes me a strong candidate.'). Use bolding sparingly and strategically to draw attention to the most critical qualifications. Avoid bolding generic phrases, full sentences, or parts of the salutation/closing.
 """
+
     prompt = f"""
 You are an expert career strategist and an exceptionally skilled cover letter writer, renowned for crafting compelling narratives that captivate recruiters in seconds.
 Your task is to write a highly personalized, impactful, and human-written one-page cover letter for '{candidate_name}'.
 
-**CRITICAL GOAL:** The first paragraph MUST be powerful enough to make the recruiter stop and read the entire letter. It should immediately convey strong interest, a unique value proposition, and a direct link to the role or company. Aim to impress within the first 10 seconds of reading.
+**CRITICAL GOAL:** The first paragraph MUST be a powerful "10-Second Hook" that makes the recruiter stop and read the entire letter. It should immediately convey strong, specific interest, a unique value proposition, and a direct link to the role or company.
 
-**CONTEXT FOR COVER LETTER GENERATION:**
+**CONTEXT FOR COVER LETTER GENERATION (Use this information to write the letter):**
 {contact_info_str.strip()}
 {profile_source_text}
 {project_context_for_cl}
 {cover_letter_bolding_instruction}
-1.  **CANDIDATE INFORMATION:**
+
+1.  **CANDIDATE INFORMATION (Source Material):**
     * Name: {candidate_name}
     * Contact (for your reference, do not necessarily replicate this verbatim in the letter header unless appropriate for standard letter format):
         {contact_info_str.strip()}
     * Detailed Profile & Experience (draw from these sources, prioritizing the Master Profile if available, then tailored resume sections):
         {profile_source_text}
 
-2.  **TARGET ROLE & COMPANY:**
+2.  **TARGET ROLE & COMPANY (Source Material):**
     * Job Title: {job_title}
     * Company Name: {company_name}
-    * Key Job Requirements Summary: {job_requirements_summary if job_requirements_summary else 'Refer to ATS Keywords.'}
+    * Key Job Requirements Summary (from Job Description): {job_requirements_summary if job_requirements_summary else 'Not explicitly provided; infer from ATS Keywords and Job Title.'}
     * Key ATS Keywords to Address: {ats_keywords_str if ats_keywords_str else 'Focus on general alignment with the job title and requirements.'}
 
-**INSTRUCTIONS FOR WRITING THE COVER LETTER:**
+**INSTRUCTIONS FOR WRITING THE COVER LETTER (Follow Meticulously):**
 
 1.  **Overall Tone & Style:**
-    * Human-Written: Avoid robotic, generic, or overly formal language. Write with authentic enthusiasm and a confident, professional voice.
-    * Well-Crafted: Ensure impeccable grammar, clear sentence structure, and a smooth, logical flow between paragraphs.
-    * Concise: The entire cover letter MUST NOT exceed one page. Be impactful with fewer words. Every sentence should add value.
+    * **Human-Written & Engaging:** Avoid robotic, generic, or overly formal language. Write with authentic enthusiasm and a confident, professional voice.
+    * **Well-Crafted:** Ensure impeccable grammar, clear sentence structure, and a smooth, logical flow between paragraphs.
+    * **Concise & Impactful:** The entire cover letter MUST NOT exceed one page. Be impactful with fewer words. Every sentence should add clear value.
+    * **Keyword Emphasis:** Follow the 'Keyword Bolding Guidance' provided above to highlight key terms effectively.
 
-2.  **Structure & Content:**
+2.  **Structure & Content Details:**
     * **Salutation:** Address it to "{salutation_address}".
-    * **Opening Paragraph (The 10-Second Hook):**
+    * **Opening Paragraph (The 10-Second Hook - CRITICAL):**
         * Clearly state the specific position ({job_title}) you are applying for.
-        * Immediately articulate your core value proposition or a compelling reason for your interest that directly relates to the company or role. Make this opening uniquely tailored.
-    * **Body Paragraphs (2-3 maximum):**
-        * **Substantial Content Per Paragraph:** Each body paragraph should be well-developed, consisting of at least 3-5 substantial sentences to provide sufficient depth and context.
-        * **Elaborate on Achievements:** Select 1-2 distinct and significant achievements or experiences from the CANDIDATE INFORMATION. For each, elaborate on the situation, your specific actions/contributions, the skills/technologies utilized, and the quantifiable results or impact.
-        * **Explicitly connect your experience:** Draw these specific examples, achievements, and skills directly from the "CANDIDATE INFORMATION" provided above (Master Profile, Tailored Resume Summary, Work Experience, Projects).
-        * **Targeted Relevance:** For each example, clearly demonstrate how it aligns with 2-3 of the most critical "Key Job Requirements Summary" or "Key ATS Keywords." Do not just list skills; show impact and results.
+        * Immediately articulate your core value proposition or a compelling reason for your interest that directly relates to the company or role. Make this opening uniquely tailored and impactful.
+    * **Body Paragraphs (2-3 maximum, each substantial):**
+        * **Depth and Elaboration:** Each body paragraph should be well-developed, consisting of at least 3-5 substantial sentences. This is crucial for conveying adequate detail and avoiding a cover letter that feels too short.
+        * **Focus on Impact:** For each paragraph, select 1-2 distinct and significant achievements, projects, or skill sets from the "CANDIDATE INFORMATION". Elaborate on the situation, your specific actions/contributions, the skills/technologies utilized (especially those from ATS Keywords), and the **quantifiable results or impact**.
+        * **Targeted Relevance:** Clearly demonstrate how each example aligns with the most critical "Key Job Requirements Summary" or "Key ATS Keywords". Show, don't just tell.
         * **Online Presence & Project Mentions:**
-            * You can subtly weave in references to professional online presence like GitHub or LinkedIn when generally discussing your profile (e.g., "as further detailed on my LinkedIn profile" or "my work on various projects, available on my GitHub, demonstrates...").
-            * **Mentioning Projects (CRITICAL):** You can and should discuss relevant projects from the 'KEY PROJECT DETAILS' or other candidate information. However, **DO NOT include any URLs (like 'http://...' or 'www...') for these specific projects directly in the body of the cover letter.** You can state that project details are available (e.g., 'details of which can be found in my portfolio' or 'as demonstrated in my work on the XYZ project'), but do not attempt to insert HTTP links or placeholders like '[Project URL]' for specific projects within your generated text.
-        * **Company Focus (Decision Point):**
-            * If '{company_name}' is a specific company name (not a generic placeholder like "Hiring Team" or "The Company"), weave in 1-2 brief, genuine points about your interest in *that specific company* (e.g., its mission, values, a recent project, or how it aligns with your career goals). This shows you've done your research.
-            * If '{company_name}' seems like a generic placeholder, focus more on your fit for the role type and industry, and your general enthusiasm for such opportunities.
+            * You can subtly weave in general references to professional online presence if it flows naturally (e.g., "My broader project portfolio, available on my GitHub, showcases...").
+            * **Mentioning Specific Projects (CRITICAL - NO URLS IN BODY):** You can and should discuss relevant projects, drawing details from the 'KEY PROJECT DETAILS' or other candidate information. However, **DO NOT include any URLs (like 'http://...' or 'www...') for these specific projects directly in the body of the cover letter.** You can state that project details are available (e.g., 'details of which can be found in my portfolio' or 'as demonstrated in my work on the XYZ project'), but do not attempt to insert HTTP links or placeholders like '[Project URL]' for specific projects within your generated text. The 'KEY PROJECT DETAILS' section in the context (if provided) is for your informational background only regarding which projects might have demos.
+        * **Company Focus (CRITICALLY IMPORTANT - AVOID PLACEHOLDERS):**
+            * **If '{company_name}' is a specific, real company name (e.g., "NVIDIA", "Google", "Aidaptive", not generic like "Hiring Team" or "A Startup"):**
+                * You MUST research (or infer based on common knowledge if specific research isn't possible from the context provided) and weave in 1-2 brief, genuine, and *specific* points about your interest in *that particular company*. This could be related to its known mission, widely recognized values, a significant recent project or product, its industry leadership, or how its specific work aligns with the candidate's career goals or values from the Master Profile.
+                * **Your output for this part MUST be the actual personalized sentence(s). DO NOT output instructional text or placeholders like "[mention a specific detail...]" or "[company-specific point]" or similar.**
+            * **If, after attempting to personalize, you cannot find truly specific information about '{company_name}' OR if '{company_name}' seems like a generic placeholder:**
+                * In this case, instead of specific company details, you should write a sentence or two expressing enthusiasm for the *type of work done in the industry of the '{job_title}'*, or how the *challenges typical for such a role* are what motivate the candidate. Focus on the candidate's passion for the field and the general opportunity the role represents.
+                * **Again, DO NOT output any instructional text or placeholders. Generate actual, natural-sounding prose that fits the context.**
     * **Closing Paragraph:**
         * Briefly reiterate your strong interest and confidence in your ability to contribute.
-        * **Reference to Online Profiles (General):** You can mention, "My full professional profile, including links to my work and projects, is available via my LinkedIn and GitHub, referenced at the top of my resume." Or a similar natural phrase.
+        * You can include a phrase like: "My full professional profile, showcasing my projects and contributions, is detailed on my LinkedIn and GitHub, referenced in my resume."
         * Include a clear call to action, expressing your eagerness to discuss your qualifications further in an interview.
     * **Professional Closing (Formatting CRITICAL):**
         * Use a standard closing like 'Sincerely,'.
@@ -404,18 +421,19 @@ Your task is to write a highly personalized, impactful, and human-written one-pa
             Sincerely,\\n
             \\n
             {candidate_name}
-        * The generated text for the cover letter MUST END after the candidate's name. Any additional contact information or profile links intended to be separate lines below the name (like GitHub/Portfolio hyperlinks) will be handled by downstream DOCX formatting processes and should NOT be part of your generated text here.
+        * The generated text for the cover letter MUST END after the candidate's name. Any additional contact information or profile links (like GitHub/Portfolio as separate lines below the name) will be handled by downstream DOCX formatting processes and should NOT be part of your generated text here.
 
-3.  **What to AVOID:**
+3.  **What to AVOID (Strict Adherence Required):**
     * **Do NOT include a date** anywhere in the cover letter.
-    * Do NOT simply rehash the resume. Synthesize and connect the dots.
-    * Avoid clichés (e.g., "I am a hardworking team player"). Show, don't just tell.
-    * Do NOT make up information or skills not present in the provided candidate information.
-    * Do NOT include your own headers like "Cover Letter:" or "Dear {salutation_address}," if the salutation is already handled by the structure above. Start directly with the salutation if appropriate for a standard letter body.
-    * **CRITICALLY AVOID:** Do not insert any URLs for specific projects (e.g., 'http://...', 'www...') or placeholders like '[Project URL]' within the body paragraphs when discussing projects.
+    * Do NOT simply rehash the resume. Synthesize and connect the dots to the target role.
+    * Avoid clichés (e.g., "I am a hardworking team player"). Show your qualities through examples.
+    * Do NOT make up information or skills not present in the provided "CANDIDATE INFORMATION".
+    * Do NOT include your own headers like "Cover Letter:" or "Dear {salutation_address}," if the salutation is already handled by the structure above. Start directly with the salutation.
+    * **CRITICALLY AVOID (PLACEHOLDERS):** Do not output any instructional text or placeholders from this prompt (e.g., "[mention a specific detail...]", "[company-specific point]", "[Project URL]"). Your response must be the cover letter itself, ready for use.
+    * **CRITICALLY AVOID (PROJECT URLS IN BODY):** Do not insert any URLs for specific projects (e.g., 'http://...', 'www...') within the body paragraphs when discussing projects.
 
 **OUTPUT FORMAT:**
-Provide ONLY the text of the cover letter, formatted as a standard business letter. This includes the salutation, the body paragraphs, and the closing (formatted as specified above). Do not add any other explanations, titles, or text before or after the cover letter itself.
+Provide ONLY the text of the cover letter, formatted as a standard business letter. This includes the salutation, the body paragraphs (with keyword bolding applied as per 'Keyword Bolding Guidance'), and the closing (formatted as specified above). Do not add any other explanations, titles, or text before or after the cover letter itself.
 
 --- BEGIN COVER LETTER ---
 """
