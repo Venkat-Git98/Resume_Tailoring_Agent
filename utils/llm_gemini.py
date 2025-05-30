@@ -298,22 +298,29 @@ Output ONLY the refined section text itself or the omission recommendation. Do n
 
 # get_cover_letter_prompt and get_resume_critique_prompt remain IDENTICAL 
 # to the version you provided in the prompt that had the f-string syntax error corrected.
+import logging
+from typing import Dict, List, Optional # Ensure List and Optional are imported
+
+# Make sure logging is configured in your main script or when this module is imported.
+# For example, at the top of llm_gemini.py or in the script that calls this:
+# logging.basicConfig(level=logging.INFO) # Or your preferred level
+
 def get_cover_letter_prompt(
     candidate_name: str,
-    candidate_contact_info: Dict[str, str], 
-    job_title: str, 
-    company_name: str, 
-    job_requirements_summary: str, 
-    ats_keywords_str: str, 
+    candidate_contact_info: Dict[str, str],
+    job_title: str,
+    company_name: str,
+    job_requirements_summary: str,
+    ats_keywords_str: str,
     tailored_resume_summary_text: Optional[str],
-    tailored_work_experience_text: Optional[str], 
-    tailored_projects_text: Optional[str], 
+    tailored_work_experience_text: Optional[str],
+    tailored_projects_text: Optional[str],
     master_profile_text: Optional[str] = None,
     hiring_manager_name: Optional[str] = None,
     project_details_for_cl: Optional[List[Dict[str,str]]] = None
 ) -> str:
-    logging.info("Generating detailed prompt for cover letter generation.") 
-    contact_info_str = f"Candidate Email: {candidate_contact_info.get('email', 'N/A')}\n" 
+    logging.info("Generating detailed prompt for cover letter generation.")
+    contact_info_str = f"Candidate Email: {candidate_contact_info.get('email', 'N/A')}\n"
     if candidate_contact_info.get('phone'):
         contact_info_str += f"Candidate Phone: {candidate_contact_info.get('phone')}\n"
     if candidate_contact_info.get('linkedin_url'):
@@ -322,17 +329,17 @@ def get_cover_letter_prompt(
     profile_source_text = ""
     if master_profile_text and master_profile_text.strip():
         profile_source_text += f"\n\n--- CANDIDATE'S MASTER PROFILE (Use as primary source of truth and detailed context) ---\n{master_profile_text}\n--- END MASTER PROFILE ---"
-    
+
     if tailored_resume_summary_text and tailored_resume_summary_text.strip():
         profile_source_text += f"\n\n--- CANDIDATE'S TAILORED RESUME SUMMARY ---\n{tailored_resume_summary_text}\n--- END SUMMARY ---"
-    
+
     if tailored_work_experience_text and tailored_work_experience_text.strip():
         profile_source_text += f"\n\n--- CANDIDATE'S TAILORED WORK EXPERIENCE (Key achievements and roles) ---\n{tailored_work_experience_text}\n--- END WORK EXPERIENCE ---"
 
     if tailored_projects_text and tailored_projects_text.strip():
         profile_source_text += f"\n\n--- CANDIDATE'S TAILORED PROJECTS (Key projects and contributions) ---\n{tailored_projects_text}\n--- END PROJECTS ---"
 
-    if not profile_source_text: 
+    if not profile_source_text:
         profile_source_text = "\nCandidate information seems to be missing or incomplete."
 
     salutation_address = hiring_manager_name if hiring_manager_name else f"Hiring Team at {company_name}"
@@ -342,8 +349,8 @@ def get_cover_letter_prompt(
             f"- Project: {proj.get('title', 'N/A')}" + (f" (Demo: {proj.get('url')})" if proj.get('url') else "")
             for proj in project_details_for_cl
         ]
-        if project_lines: project_context_for_cl = "\n\n--- KEY PROJECT DETAILS ---\n" + "\n".join(project_lines) + "\n--- END KEY PROJECT DETAILS ---"
-    
+        if project_lines: project_context_for_cl = "\n\n--- KEY PROJECT DETAILS (for your reference if mentioning projects; includes Demo URLs if available) ---\n" + "\n".join(project_lines) + "\n--- END KEY PROJECT DETAILS ---"
+
     prompt = f"""
 You are an expert career strategist and an exceptionally skilled cover letter writer, renowned for crafting compelling narratives that captivate recruiters in seconds.
 Your task is to write a highly personalized, impactful, and human-written one-page cover letter for '{candidate_name}'.
@@ -353,7 +360,7 @@ Your task is to write a highly personalized, impactful, and human-written one-pa
 **CONTEXT FOR COVER LETTER GENERATION:**
 {contact_info_str.strip()}
 {profile_source_text}
-{project_context_for_cl} 
+{project_context_for_cl}
 
 1.  **CANDIDATE INFORMATION:**
     * Name: {candidate_name}
@@ -381,17 +388,28 @@ Your task is to write a highly personalized, impactful, and human-written one-pa
         * Clearly state the specific position ({job_title}) you are applying for.
         * Immediately articulate your core value proposition or a compelling reason for your interest that directly relates to the company or role. Make this opening uniquely tailored.
     * **Body Paragraphs (2-3 maximum):**
-        * **Explicitly connect your experience:** Draw specific examples, achievements, and skills directly from the "CANDIDATE INFORMATION" provided above (Master Profile, Tailored Resume Summary, Work Experience, Projects).
-        * **Integrate Online Presence:** Subtly weave in references to your professional online presence where relevant. For example, when discussing a project, you might say, "as demonstrated in my GitHub profile," or when highlighting overall skills, "which are further detailed on my LinkedIn." You can also direct them to a project URL if a specific project is discussed: "For a closer look at the AI-Text Discriminator, the project is accessible at [Project URL from KEY PROJECT DETAILS if provided]." The actual URLs for LinkedIn, GitHub, Portfolio, and projects are provided above for your context.
+        * **Substantial Content Per Paragraph:** Each body paragraph should be well-developed, consisting of at least 3-5 substantial sentences to provide sufficient depth and context.
+        * **Elaborate on Achievements:** Select 1-2 distinct and significant achievements or experiences from the CANDIDATE INFORMATION. For each, elaborate on the situation, your specific actions/contributions, the skills/technologies utilized, and the quantifiable results or impact.
+        * **Explicitly connect your experience:** Draw these specific examples, achievements, and skills directly from the "CANDIDATE INFORMATION" provided above (Master Profile, Tailored Resume Summary, Work Experience, Projects).
         * **Targeted Relevance:** For each example, clearly demonstrate how it aligns with 2-3 of the most critical "Key Job Requirements Summary" or "Key ATS Keywords." Do not just list skills; show impact and results.
+        * **Integrate Online Presence & Project URLs:**
+            * Subtly weave in references to professional online presence where relevant (e.g., "as demonstrated on my GitHub profile," or "further detailed on my LinkedIn.").
+            * **Project URL Handling (CRITICAL):** If you discuss a project for which a 'Demo' URL is provided in the 'KEY PROJECT DETAILS' section of this prompt (e.g., '(Demo: http://example.com)'), you MUST incorporate that specific URL directly and naturally into the sentence. For example: '...as demonstrated in my XYZ Demo project (http://example.com)...' or '...details of which can be found at http://example.com.' **DO NOT use the placeholder phrase '[Project URL...]' or similar placeholders in your output; use the actual URL if provided within the KEY PROJECT DETAILS for that project.** If no URL is in KEY PROJECT DETAILS for a mentioned project, then simply describe the project without a URL placeholder or mentioning a URL.
         * **Company Focus (Decision Point):**
             * If '{company_name}' is a specific company name (not a generic placeholder like "Hiring Team" or "The Company"), weave in 1-2 brief, genuine points about your interest in *that specific company* (e.g., its mission, values, a recent project, or how it aligns with your career goals). This shows you've done your research.
             * If '{company_name}' seems like a generic placeholder, focus more on your fit for the role type and industry, and your general enthusiasm for such opportunities.
     * **Closing Paragraph:**
         * Briefly reiterate your strong interest and confidence in your ability to contribute.
-        * **NEW: You can also mention, "My full professional profile, including links to my work and projects, is available via my LinkedIn and GitHub, referenced at the top of my resume (and in my contact details if you choose to include them)."** Or a similar natural phrase.
+        * **Reference to Online Profiles (General):** You can mention, "My full professional profile, including links to my work and projects, is available via my LinkedIn and GitHub, referenced at the top of my resume." Or a similar natural phrase.
         * Include a clear call to action, expressing your eagerness to discuss your qualifications further in an interview.
-    * **Professional Closing:** (e.g., "Sincerely," or "Respectfully,") followed by {candidate_name}.
+    * **Professional Closing (Formatting CRITICAL):**
+        * Use a standard closing like 'Sincerely,'.
+        * Then, ensure there is **one clear blank line** (equivalent to two newline characters in raw text: '\\n\\n') before writing the candidate's name: '{candidate_name}'.
+        * **Example of desired raw text output for closing:**
+            Sincerely,\\n
+            \\n
+            {candidate_name}
+        * The generated text for the cover letter MUST END after the candidate's name. Any additional contact information or profile links intended to be separate lines below the name (like GitHub/Portfolio hyperlinks) will be handled by downstream DOCX formatting processes and should NOT be part of your generated text here.
 
 3.  **What to AVOID:**
     * **Do NOT include a date** anywhere in the cover letter.
@@ -401,7 +419,7 @@ Your task is to write a highly personalized, impactful, and human-written one-pa
     * Do NOT include your own headers like "Cover Letter:" or "Dear {salutation_address}," if the salutation is already handled by the structure above. Start directly with the salutation if appropriate for a standard letter body.
 
 **OUTPUT FORMAT:**
-Provide ONLY the text of the cover letter, formatted as a standard business letter. This includes the salutation, the body paragraphs, and the closing. Do not add any other explanations, titles, or text before or after the cover letter itself.
+Provide ONLY the text of the cover letter, formatted as a standard business letter. This includes the salutation, the body paragraphs, and the closing (formatted as specified above). Do not add any other explanations, titles, or text before or after the cover letter itself.
 
 --- BEGIN COVER LETTER ---
 """
@@ -414,20 +432,12 @@ def get_resume_critique_prompt(
     ats_keywords: List[str],   
     tailored_resume_text: str, # Full text of the tailored resume
     candidate_name: Optional[str] = "the candidate"
-    # You could potentially pass the total character or word count of tailored_resume_text
-    # total_char_count: Optional[int] = None 
+
 ) -> str:
     logging.info("Generating enhanced prompt for comprehensive resume critique.")
     ats_keywords_str = ", ".join(ats_keywords) if ats_keywords else "Not specifically provided."
     
-    # Instruction regarding one-page length inference
-    # page_length_inference_instruction = ""
-    # if total_char_count:
-    #     page_length_inference_instruction = f"* RESUME_LENGTH_ASSESSMENT: Based on a total character count of approximately {total_char_count}, assess if the content seems too dense for a single page or too sparse. Conciseness is key. Example: 'Content appears concise and likely fits one page well.' or 'Content seems extensive; may exceed one page, review for brevity.'"
-    # else:
-    #     page_length_inference_instruction = "* RESUME_LENGTH_ASSESSMENT: Assess if the overall volume of text seems appropriate for a standard one-page resume, or if it appears too long or too short. Example: 'Content volume seems appropriate for one page.' or 'Text volume is very high, likely to be multiple pages.'"
-
-
+   
     prompt = f"""
 You are an expert AI resume reviewer combining the precision of an ATS with the critical eye of an experienced senior recruiter and a meticulous proofreader.
 Your task is to provide a comprehensive evaluation of the TAILORED RESUME for '{candidate_name}' against the JOB DESCRIPTION for the role of '{job_title}'.
