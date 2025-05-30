@@ -659,10 +659,22 @@ def generate_cover_letter_pdf(
     # Remove theme font settings if they cause issues (optional, but often good for consistency)
     ct_style_rpr = normal_style.element.get_or_add_rPr()
     ct_style_fonts = ct_style_rpr.get_or_add_rFonts()
-    for attr_name in ['asciiTheme', 'hAnsiTheme', 'eastAsiaTheme', 'cstheme']: # Corrected attribute names
-        attr_qname = норма_style.element.nsmap.get('w', '') + attr_name # Construct QName if needed, or use qn()
-        # Simplified check, assuming direct attribute names for demonstration
-        # if ct_style_fonts.get(attr_qname) is not None: del ct_style_fonts.attrib[attr_qname]
+    
+    # INCORRECT BLOCK FROM PREVIOUS SUGGESTION:
+    # for attr_name in ['asciiTheme', 'hAnsiTheme', 'eastAsiaTheme', 'cstheme']: # Corrected attribute names
+    #     attr_qname = норма_style.element.nsmap.get('w', '') + attr_name # Construct QName if needed, or use qn() <-- TYPO HERE
+    #     # Simplified check, assuming direct attribute names for demonstration
+    #     # if ct_style_fonts.get(attr_qname) is not None: del ct_style_fonts.attrib[attr_qname]
+
+    # CORRECTED BLOCK TO REMOVE THEME FONT SETTINGS:
+    theme_font_attributes = [
+        qn('w:asciiTheme'), qn('w:hAnsiTheme'),
+        qn('w:eastAsiaTheme'), qn('w:cstheme')
+    ]
+    for attr in theme_font_attributes:
+        if attr in ct_style_fonts.attrib:
+            del ct_style_fonts.attrib[attr]
+    # END CORRECTED BLOCK
 
     ct_style_fonts.set(qn('w:ascii'), 'Times New Roman')
     ct_style_fonts.set(qn('w:hAnsi'), 'Times New Roman')
@@ -670,11 +682,10 @@ def generate_cover_letter_pdf(
     ct_style_fonts.set(qn('w:eastAsia'), 'Times New Roman')
 
     normal_style.paragraph_format.space_before = Pt(0)
-    normal_style.paragraph_format.space_after = Pt(0) # Default spacing for body, can be overridden
+    normal_style.paragraph_format.space_after = Pt(0) 
     normal_style.paragraph_format.line_spacing = 1.15
-    normal_style.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.LEFT # Default for CL body
-    normal_style.paragraph_format.widow_control = True # Apply widow_control to normal style
-
+    normal_style.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.LEFT 
+    normal_style.paragraph_format.widow_control = True
     for section_elm in document.sections:
         section_elm.left_margin = Inches(1)
         section_elm.right_margin = Inches(1)
