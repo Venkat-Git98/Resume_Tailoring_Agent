@@ -637,36 +637,28 @@ def generate_styled_resume_pdf(
     return generate_pdf_via_google_drive(document, output_pdf_directory, base_pdf_filename)
 
 def generate_cover_letter_pdf(
-    cover_letter_body_text: str, # This is the raw text from the LLM
+    cover_letter_body_text: str,
     contact_info: Dict[str, str],
-    job_title: str, # Used in filename
-    company_name: str, # Used in filename
+    job_title: str,
+    company_name: str,
     output_pdf_directory: str,
-    filename_keyword: str = "CoverLetter", # Base keyword for the filename
-    years_of_experience: Optional[int] = None # For filename consistency if desired
+    filename_keyword: str = "CoverLetter",
+    years_of_experience: Optional[int] = None
 ) -> Optional[str]:
 
-    logger.info(f"Starting styled COVER LETTER PDF generation using Google Drive. Output dir: '{output_pdf_directory}'")
+    logger.info(f"Starting styled COVER LETTER PDF generation. Output dir: '{output_pdf_directory}'")
     document = Document()
 
     # --- Default Styles and Margins for Cover Letter ---
-    # (Using settings similar to your existing generate_cover_letter_pdf)
+    # (Your existing style setup, ensuring normal_style.paragraph_format.widow_control = True)
     normal_style = document.styles['Normal']
     normal_font = normal_style.font
     normal_font.name = 'Times New Roman'
-    normal_font.size = Pt(11) # Common size for cover letters
+    normal_font.size = Pt(11)
 
-    # Remove theme font settings if they cause issues (optional, but often good for consistency)
+    # Corrected block to remove theme font settings
     ct_style_rpr = normal_style.element.get_or_add_rPr()
     ct_style_fonts = ct_style_rpr.get_or_add_rFonts()
-    
-    # INCORRECT BLOCK FROM PREVIOUS SUGGESTION:
-    # for attr_name in ['asciiTheme', 'hAnsiTheme', 'eastAsiaTheme', 'cstheme']: # Corrected attribute names
-    #     attr_qname = норма_style.element.nsmap.get('w', '') + attr_name # Construct QName if needed, or use qn() <-- TYPO HERE
-    #     # Simplified check, assuming direct attribute names for demonstration
-    #     # if ct_style_fonts.get(attr_qname) is not None: del ct_style_fonts.attrib[attr_qname]
-
-    # CORRECTED BLOCK TO REMOVE THEME FONT SETTINGS:
     theme_font_attributes = [
         qn('w:asciiTheme'), qn('w:hAnsiTheme'),
         qn('w:eastAsiaTheme'), qn('w:cstheme')
@@ -674,81 +666,106 @@ def generate_cover_letter_pdf(
     for attr in theme_font_attributes:
         if attr in ct_style_fonts.attrib:
             del ct_style_fonts.attrib[attr]
-    # END CORRECTED BLOCK
-
+    
     ct_style_fonts.set(qn('w:ascii'), 'Times New Roman')
     ct_style_fonts.set(qn('w:hAnsi'), 'Times New Roman')
     ct_style_fonts.set(qn('w:cs'), 'Times New Roman')
     ct_style_fonts.set(qn('w:eastAsia'), 'Times New Roman')
 
     normal_style.paragraph_format.space_before = Pt(0)
-    normal_style.paragraph_format.space_after = Pt(0) 
+    normal_style.paragraph_format.space_after = Pt(0)
     normal_style.paragraph_format.line_spacing = 1.15
-    normal_style.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.LEFT 
-    normal_style.paragraph_format.widow_control = True
+    normal_style.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    normal_style.paragraph_format.widow_control = True # IMPORTANT
+
     for section_elm in document.sections:
         section_elm.left_margin = Inches(1)
         section_elm.right_margin = Inches(1)
-        section_elm.top_margin = Inches(1)
-        section_elm.bottom_margin = Inches(1)
+        section_elm.top_margin = Inches(0.75) # Adjusted top margin for letterhead
+        section_elm.bottom_margin = Inches(0.75) # Adjusted bottom margin
 
-    # --- Add Candidate's Contact Information at the Top ---
-    # This part seems to be from your existing `generate_cover_letter_pdf`
-    # Ensure these use `add_styled_paragraph` or have `widow_control = True` set directly
-    # if `add_styled_paragraph` doesn't already include it.
+    # --- Create Traditional Letterhead Style Top Contact Block ---
+    letterhead_font_name = 'Times New Roman'
+    letterhead_font_size = Pt(11) # Standard size for contact details
+    letterhead_name_font_size = Pt(14) # Slightly larger for the name
+    letterhead_alignment = WD_ALIGN_PARAGRAPH.LEFT # Or .CENTER or .RIGHT
 
-    top_contact_font_name = 'Times New Roman'
-    top_contact_font_size = Pt(11) # Font size for the contact block at the top
-
+    # Candidate Name
     if contact_info.get("name"):
-        # For the name, usually it's a bit larger or bolder if it's the very first line of the letter page.
-        p_c_name = add_styled_paragraph(document, contact_info["name"],
-                                        font_name=top_contact_font_name, font_size=Pt(12),
-                                        is_bold=True, space_after=Pt(0),
-                                        alignment=WD_ALIGN_PARAGRAPH.LEFT)
-        # `add_styled_paragraph` should ideally set widow_control = True
+        p_name = add_styled_paragraph(
+            document,
+            contact_info["name"],
+            font_name=letterhead_font_name,
+            font_size=letterhead_name_font_size,
+            is_bold=True,
+            alignment=letterhead_alignment,
+            space_after=Pt(1) # Reduced space after name
+        )
+        # add_styled_paragraph should already set widow_control
 
-    location_text = contact_info.get("location") # Assuming 'location' key might exist
-    if not location_text and "|" in contact_info.get("line1_info", ""): # Fallback from line1_info
-        location_parts = contact_info["line1_info"].split("|")
-        if len(location_parts) > 0:
-             location_text = location_parts[0].strip() # Take the first part as location
+    # Street Address
+    if contact_info.get("street_address"):
+        add_styled_paragraph(
+            document,
+            contact_info["street_address"],
+            font_name=letterhead_font_name,
+            font_size=letterhead_font_size,
+            alignment=letterhead_alignment,
+            space_after=Pt(1) # Reduced space
+        )
 
-    if location_text:
-        p_loc = add_styled_paragraph(document, location_text,
-                                     font_name=top_contact_font_name, font_size=top_contact_font_size,
-                                     space_after=Pt(0), alignment=WD_ALIGN_PARAGRAPH.LEFT)
+    # City, State Zip
+    if contact_info.get("city_state_zip"):
+        add_styled_paragraph(
+            document,
+            contact_info["city_state_zip"],
+            font_name=letterhead_font_name,
+            font_size=letterhead_font_size,
+            alignment=letterhead_alignment,
+            space_after=Pt(1) # Reduced space
+        )
 
-    # Email and LinkedIn for top contact block
+    # Phone Number
+    phone_top = contact_info.get("phone")
+    if phone_top:
+        add_styled_paragraph(
+            document,
+            phone_top,
+            font_name=letterhead_font_name,
+            font_size=letterhead_font_size,
+            alignment=letterhead_alignment,
+            space_after=Pt(1) # Reduced space
+        )
+
+    # Email Address (Hyperlinked)
     email_top = contact_info.get("email")
-    if not email_top and contact_info.get("line1_info"): # Fallback from line1_info
-        email_match_top = re.search(r'([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})', contact_info["line1_info"])
-        if email_match_top: email_top = email_match_top.group(0).strip()
-
     if email_top:
         p_email_top = document.add_paragraph()
-        p_email_top.alignment = WD_ALIGN_PARAGRAPH.LEFT
-        p_email_top.paragraph_format.space_after = Pt(0)
+        p_email_top.alignment = letterhead_alignment
+        p_email_top.paragraph_format.space_before = Pt(0)
+        p_email_top.paragraph_format.space_after = Pt(1) # Reduced space
         p_email_top.paragraph_format.widow_control = True
-        # email_run_label = p_email_top.add_run("Email: ") # Optional label
-        # email_run_label.font.name = top_contact_font_name; email_run_label.font.size = top_contact_font_size
         add_hyperlink(p_email_top, f"mailto:{email_top}", email_top,
-                      font_name=top_contact_font_name, font_size=top_contact_font_size,
+                      font_name=letterhead_font_name, font_size=letterhead_font_size,
                       color_hex="0563C1", is_underline=True)
 
-    if contact_info.get("linkedin_url"):
+    # LinkedIn Profile (Hyperlinked) - Optional for letterhead, but common
+    if contact_info.get("linkedin_url") and contact_info.get("linkedin_text"):
         p_linkedin_top = document.add_paragraph()
-        p_linkedin_top.alignment = WD_ALIGN_PARAGRAPH.LEFT
-        p_linkedin_top.paragraph_format.space_after = Pt(18) # Space after top contact block before body
+        p_linkedin_top.alignment = letterhead_alignment
+        p_linkedin_top.paragraph_format.space_before = Pt(0)
+        p_linkedin_top.paragraph_format.space_after = Pt(18) # Space after letterhead before main content
         p_linkedin_top.paragraph_format.widow_control = True
-        # linkedin_run_label = p_linkedin_top.add_run("LinkedIn: ") # Optional label
-        # linkedin_run_label.font.name = top_contact_font_name; linkedin_run_label.font.size = top_contact_font_size
-        add_hyperlink(p_linkedin_top, contact_info['linkedin_url'], contact_info.get('linkedin_text', "LinkedIn Profile"),
-                      font_name=top_contact_font_name, font_size=top_contact_font_size,
+        add_hyperlink(p_linkedin_top, contact_info["linkedin_url"], contact_info["linkedin_text"],
+                      font_name=letterhead_font_name, font_size=letterhead_font_size,
                       color_hex="0563C1", is_underline=True)
+    else: # Ensure there's still space if LinkedIn is omitted
+        p_spacer = document.add_paragraph()
+        p_spacer.paragraph_format.space_after = Pt(18)
 
 
     # --- Process the main body of the cover letter from LLM ---
+    # (This part remains the same as the previous version: stripping LLM signature, adding paragraphs)
     body_content_from_llm = cover_letter_body_text
     candidate_name_from_contact = contact_info.get('name', 'Venkatesh Shanmugam')
     candidate_name_for_regex = re.escape(candidate_name_from_contact)
@@ -760,7 +777,6 @@ def generate_cover_letter_pdf(
         for para_text_segment in visual_paragraphs:
             processed_para_text = para_text_segment.replace('\n', ' ').strip()
             if processed_para_text:
-                # Assuming add_styled_paragraph applies font, size, alignment, spacing, and widow_control
                 add_styled_paragraph(document, processed_para_text,
                                      font_name='Times New Roman', font_size=Pt(11),
                                      alignment=WD_ALIGN_PARAGRAPH.JUSTIFY,
@@ -770,75 +786,58 @@ def generate_cover_letter_pdf(
                              font_name='Times New Roman', font_size=Pt(11))
 
     # --- Add Controlled Closing, Signature, and Contact Details ---
-    closing_font_name = 'Times New Roman'
-    closing_font_size = Pt(11) # Font size for the closing block
+    closing_font_name_sig = 'Times New Roman' # Renamed to avoid conflict if any
+    closing_font_size_sig = Pt(11)
 
     sincerely_p = document.add_paragraph("Sincerely,")
     sincerely_p.alignment = WD_ALIGN_PARAGRAPH.LEFT
-    sincerely_p.paragraph_format.space_before = Pt(12) # Space before "Sincerely,"
+    sincerely_p.paragraph_format.space_before = Pt(12)
     sincerely_p.paragraph_format.space_after = Pt(0)
     sincerely_p.paragraph_format.widow_control = True
     for run in sincerely_p.runs:
-        run.font.name = closing_font_name
-        run.font.size = closing_font_size
+        run.font.name = closing_font_name_sig
+        run.font.size = closing_font_size_sig
 
-    # Paragraph for visual blank line (signature space)
     signature_space_p = document.add_paragraph()
-    run_sig_space = signature_space_p.add_run() # Add a run to apply font size
-    run_sig_space.font.size = closing_font_size # Height of this line controlled by font size
+    run_sig_space = signature_space_p.add_run()
+    run_sig_space.font.size = closing_font_size_sig
     signature_space_p.paragraph_format.space_before = Pt(0)
     signature_space_p.paragraph_format.space_after = Pt(0)
-    # No widow_control needed for an effectively empty line
 
     name_p = document.add_paragraph(candidate_name_from_contact)
     name_p.alignment = WD_ALIGN_PARAGRAPH.LEFT
-    name_p.paragraph_format.space_before = Pt(2) # Small space before name, after the visual blank line
-    name_p.paragraph_format.space_after = Pt(0) # Will be followed by contact/links
+    name_p.paragraph_format.space_before = Pt(2)
+    name_p.paragraph_format.space_after = Pt(0)
     name_p.paragraph_format.widow_control = True
     for run in name_p.runs:
-        run.font.name = closing_font_name
-        run.font.size = closing_font_size
-        # run.bold = True # Optional: if you want the name bold
+        run.font.name = closing_font_name_sig
+        run.font.size = closing_font_size_sig
 
-    # Add Phone and Email line below name
     phone_number_closing = contact_info.get("phone")
+    if phone_number_closing:
+        p_phone_closing = document.add_paragraph()
+        p_phone_closing.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        p_phone_closing.paragraph_format.space_before = Pt(2)
+        p_phone_closing.paragraph_format.space_after = Pt(0)
+        p_phone_closing.paragraph_format.widow_control = True
+        run_phone_cl = p_phone_closing.add_run(phone_number_closing)
+        run_phone_cl.font.name = closing_font_name_sig
+        run_phone_cl.font.size = closing_font_size_sig
+
     email_address_closing = contact_info.get("email")
+    if email_address_closing:
+        p_email_closing = document.add_paragraph()
+        p_email_closing.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        p_email_closing.paragraph_format.space_before = Pt(2)
+        p_email_closing.paragraph_format.space_after = Pt(0)
+        p_email_closing.paragraph_format.widow_control = True
+        add_hyperlink(p_email_closing, f"mailto:{email_address_closing}", email_address_closing,
+                      font_name=closing_font_name_sig, font_size=closing_font_size_sig,
+                      color_hex="0563C1", is_underline=True)
 
-    # Fallback parsing for phone and email if not direct keys in contact_info
-    if not phone_number_closing and contact_info.get("line1_info"):
-        phone_match_closing = re.search(r'(\+?\d[\d\s()-]{8,})', contact_info["line1_info"])
-        if phone_match_closing: phone_number_closing = phone_match_closing.group(1).strip()
-
-    if not email_address_closing and contact_info.get("line1_info"):
-        email_match_closing = re.search(r'([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})', contact_info["line1_info"])
-        if email_match_closing: email_address_closing = email_match_closing.group(0).strip()
-
-    if phone_number_closing or email_address_closing:
-        p_contact_line_closing = document.add_paragraph()
-        p_contact_line_closing.alignment = WD_ALIGN_PARAGRAPH.LEFT
-        p_contact_line_closing.paragraph_format.space_before = Pt(2) # Space after name
-        p_contact_line_closing.paragraph_format.space_after = Pt(0)
-        p_contact_line_closing.paragraph_format.widow_control = True
-        
-        added_item_on_line = False
-        if phone_number_closing:
-            run_phone_cl = p_contact_line_closing.add_run(phone_number_closing)
-            run_phone_cl.font.name = closing_font_name
-            run_phone_cl.font.size = closing_font_size
-            added_item_on_line = True
-        
-        if email_address_closing:
-            if added_item_on_line:
-                sep_run_cl = p_contact_line_closing.add_run(" | ")
-                sep_run_cl.font.name = closing_font_name
-                sep_run_cl.font.size = closing_font_size
-            add_hyperlink(p_contact_line_closing, f"mailto:{email_address_closing}", email_address_closing,
-                          font_name=closing_font_name, font_size=closing_font_size,
-                          color_hex="0563C1", is_underline=True)
-
-    # Add GitHub and Portfolio links
-    # Adjust space before these based on whether the phone/email line was added
-    space_before_profile_links = Pt(2) if (phone_number_closing or email_address_closing) else Pt(6)
+    space_before_profile_links = Pt(2)
+    if not phone_number_closing and not email_address_closing:
+        space_before_profile_links = Pt(6)
 
     if contact_info.get("github_url") and contact_info.get("github_text"):
         p_github_cl_sig = document.add_paragraph()
@@ -847,25 +846,24 @@ def generate_cover_letter_pdf(
         p_github_cl_sig.paragraph_format.space_after = Pt(0)
         p_github_cl_sig.paragraph_format.widow_control = True
         add_hyperlink(p_github_cl_sig, contact_info["github_url"], contact_info.get("github_text", "GitHub"),
-                      font_name=closing_font_name, font_size=closing_font_size, color_hex="0563C1", is_underline=True)
-        space_before_profile_links = Pt(2) # Reset space for the next link if any
+                      font_name=closing_font_name_sig, font_size=closing_font_size_sig, color_hex="0563C1", is_underline=True)
+        space_before_profile_links = Pt(2)
 
     if contact_info.get("portfolio_url") and contact_info.get("portfolio_text"):
         p_portfolio_cl_sig = document.add_paragraph()
         p_portfolio_cl_sig.alignment = WD_ALIGN_PARAGRAPH.LEFT
         p_portfolio_cl_sig.paragraph_format.space_before = space_before_profile_links
-        p_portfolio_cl_sig.paragraph_format.space_after = Pt(0) # Last item in signature block
+        p_portfolio_cl_sig.paragraph_format.space_after = Pt(0)
         p_portfolio_cl_sig.paragraph_format.widow_control = True
         add_hyperlink(p_portfolio_cl_sig, contact_info["portfolio_url"], contact_info.get("portfolio_text", "Portfolio"),
-                      font_name=closing_font_name, font_size=closing_font_size, color_hex="0563C1", is_underline=True)
+                      font_name=closing_font_name_sig, font_size=closing_font_size_sig, color_hex="0563C1", is_underline=True)
+    # --- End of closing block to insert ---
 
-    # --- End Controlled Closing ---
 
-    # Construct the base filename for the PDF
+    # --- Construct the base filename for the PDF ---
     candidate_last_name = contact_info.get("name", "Candidate").split()[-1] if contact_info.get("name") else "CL"
     company_str = re.sub(r'\W+', '', company_name) if company_name else "TargetCompany"
     base_pdf_filename = f"{filename_keyword}_{company_str}_{candidate_last_name}"
     base_pdf_filename = re.sub(r'[^\w\.\-_]', '_', base_pdf_filename) # Sanitize
 
-    # Call the Google Drive PDF generation utility
     return generate_pdf_via_google_drive(document, output_pdf_directory, base_pdf_filename)

@@ -54,18 +54,21 @@ DEFAULT_PDF_OUTPUT_DIR = os.path.join(DATA_DIR, "tailored_documents")
 DEFAULT_TAILORED_JSON_PATH = os.path.join(DEFAULT_PDF_OUTPUT_DIR, TAILORED_JSON_OUTPUT_NAME) 
 
 # --- Predefined Profile Information for DOCX/PDF Generation ---
+# In Resume_Tailoring/config.py
+
 PREDEFINED_CONTACT_INFO = {
-    "name": "Venkatesh Shanmugam", 
-    "location_city_state": "Virginia US", # Example of separating
-    "email": "svenkatesh.js@gmail.com",   # Explicit email
-    "phone": "+1 (703) 216-2540",  
-    "line1_info": "Virginia US | svenkatesh.js@gmail.com | +1 (703) 216-2540", 
-    "linkedin_text": "LinkedIn", 
-    "linkedin_url": "https://www.linkedin.com/in/svenkatesh-js/", 
-    "github_text": "GitHub", 
-    "github_url": "https://github.com/Venkat-Git98", 
-    "portfolio_text": "Portfolio", 
-    "portfolio_url": "https://venkatjs.netlify.app/" 
+    "name": "Venkatesh Shanmugam",
+    "street_address": "123 Example Street, Apt 4B",  # Add your street address
+    "city_state_zip": "Arlington, VA 22201",     # Add City, State, Zip
+    "phone": "+1 (703) 216-2540",                # Explicit phone
+    "email": "svenkatesh.js@gmail.com",          # Explicit email
+    "linkedin_text": "LinkedIn Profile",         # More descriptive text for the link
+    "linkedin_url": "https://www.linkedin.com/in/svenkatesh-js/",
+    "github_text": "GitHub Portfolio",           # More descriptive text for the link
+    "github_url": "https://github.com/Venkat-Git98",
+    "portfolio_text": "Personal Portfolio",      # More descriptive text for the link
+    "portfolio_url": "https://venkatjs.netlify.app/",
+    "line1_info": "Virginia US | svenkatesh.js@gmail.com | +1 (703) 216-2540" # Can be kept for other uses or removed if redundant
 }
 
 PREDEFINED_EDUCATION_INFO = [ 

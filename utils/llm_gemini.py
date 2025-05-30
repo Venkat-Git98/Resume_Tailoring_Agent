@@ -343,7 +343,9 @@ def get_cover_letter_prompt(
             for proj in project_details_for_cl
         ]
         if project_lines: project_context_for_cl = "\n\n--- KEY PROJECT DETAILS (for your reference if mentioning projects; DO NOT insert these URLs into the cover letter body) ---\n" + "\n".join(project_lines) + "\n--- END KEY PROJECT DETAILS ---"
-
+    cover_letter_bolding_instruction = """
+**Keyword Bolding:** Within the body paragraphs of the cover letter you generate, identify 2-4 of the most impactful keywords, phrases, or specific skills (especially those aligning with the 'Key Job Requirements Summary' or 'Key ATS Keywords' provided for the target role) and enclose them in double asterisks. For example: 'My experience with **Retrieval-Augmented Generation** and **deploying scalable ML solutions** directly addresses your needs.' Do not bold generic phrases, full sentences, or parts of the salutation/closing. The bolding should emphasize specific, high-value terms.
+"""
     prompt = f"""
 You are an expert career strategist and an exceptionally skilled cover letter writer, renowned for crafting compelling narratives that captivate recruiters in seconds.
 Your task is to write a highly personalized, impactful, and human-written one-page cover letter for '{candidate_name}'.
@@ -354,7 +356,7 @@ Your task is to write a highly personalized, impactful, and human-written one-pa
 {contact_info_str.strip()}
 {profile_source_text}
 {project_context_for_cl}
-
+{cover_letter_bolding_instruction}
 1.  **CANDIDATE INFORMATION:**
     * Name: {candidate_name}
     * Contact (for your reference, do not necessarily replicate this verbatim in the letter header unless appropriate for standard letter format):
