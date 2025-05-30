@@ -52,7 +52,15 @@ DEFAULT_MASTER_PROFILE_PATH = os.path.join(PROJECT_ROOT, DEFAULT_MASTER_PROFILE_
 TAILORED_JSON_OUTPUT_NAME = "tailored_resume.json" 
 DEFAULT_PDF_OUTPUT_DIR = os.path.join(DATA_DIR, "tailored_documents")
 DEFAULT_TAILORED_JSON_PATH = os.path.join(DEFAULT_PDF_OUTPUT_DIR, TAILORED_JSON_OUTPUT_NAME) 
+# In Resume_Tailoring/config.py
 
+# ... (other configurations like PROJECT_ROOT, SERVICE_ACCOUNT_JSON_CONTENT) ...
+
+# --- Google Cloud Storage Configuration ---
+GCS_BUCKET_NAME = os.getenv("GCS_BUCKET_NAME", "tailoring-agent") # Or directly your bucket name
+# Ensure GOOGLE_CREDENTIALS_JSON_CONTENT is also set and has permissions for this bucket.
+
+# ... (rest of your configurations) ...
 # --- Predefined Profile Information for DOCX/PDF Generation ---
 # In Resume_Tailoring/config.py
 
