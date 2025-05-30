@@ -97,7 +97,14 @@ except ImportError as e:
     logging.error(f"Failed to import one or more Resume_Tailoring modules: {e}. sys.path: {sys.path}", exc_info=True)
     # Reset all to None if any fails
     OrchestratorAgent, GeminiClient, generate_styled_resume_pdf, generate_cover_letter_pdf, send_job_application_email, extract_tailored_data_for_resume_pdf = None, None, None, None, None, None
-
+try:
+    from utils.gcs_utils import get_gcs_client, upload_file_to_gcs
+    GCP_UTILS_LOADED = True
+    logging.info("Successfully imported gcp_utils.")
+except ImportError as e_gcp:
+    GCP_UTILS_LOADED = False
+    get_gcs_client, upload_file_to_gcs = None, None # Define them as None
+    logging.error(f"Failed to import gcp_utils: {e_gcp}. GCS uploads will be skipped.", exc_info=True)
 # --- Configuration Values (with fallbacks if app_config failed or is None) ---
 USER_AGENT = getattr(app_config, "USER_AGENT", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
 JOBRIGHT_URL = getattr(app_config, "JOBRIGHT_URL", "https://jobright.ai/")
@@ -858,7 +865,7 @@ def process_linkedin_job_search(scraper_cfg, seen_job_ids_globally):
             newly_detailed_jobs_for_linkedin.append(job_data) # Add summary if URL is bad
     logging.info(f"LINKEDIN: Search {search_name} done. Found {len(newly_detailed_jobs_for_linkedin)} new detailed jobs this run.")
     return newly_detailed_jobs_for_linkedin
-
+gcs_client_global = None
 
 def initialize_tailoring_system():
     global llm_client_global, orchestrator_agent_global, tailoring_output_dir_global
@@ -1088,24 +1095,30 @@ def delete_state_files_task():
     logging.info("Midnight file deletion task completed.")
 
 def run_all_scrapers_and_process():
-    global CURRENT_DAY_TRACKER, DAILY_RUN_COUNTER # Make globals accessible
+    global CURRENT_DAY_TRACKER, DAILY_RUN_COUNTER, gcs_client_global # Ensure gcs_client_global is global if initialized elsewhere
 
-    # --- Daily Counter Logic ---
+    # --- Daily Counter Logic & GCS Client Init ---
     today = datetime.date.today()
     if today != CURRENT_DAY_TRACKER:
         logging.info(f"Date changed from {CURRENT_DAY_TRACKER} to {today}. Resetting daily run counter.")
         CURRENT_DAY_TRACKER = today
         DAILY_RUN_COUNTER = 0  # Reset for the new day, first run will be 0
-    # For the very first run of the script on a given day, DAILY_RUN_COUNTER is already 0.
-    # For subsequent runs on the same day, it will have been incremented by the previous run.
-    # --- End Daily Counter Logic ---
+    
+    current_run_number_for_logging = DAILY_RUN_COUNTER # Capture current run number for logging this cycle
 
-    logging.info(f"===== CYCLE START (Date: {CURRENT_DAY_TRACKER}, Run: {DAILY_RUN_COUNTER}): Running all scrapers and processing =====")
+    logging.info(f"===== CYCLE START (Date: {CURRENT_DAY_TRACKER}, Run: {current_run_number_for_logging}) =====")
+
+    # Initialize GCS client if not already done and utils are loaded
+    if GCP_UTILS_LOADED and not gcs_client_global:
+        gcs_client_global = get_gcs_client()
+        if not gcs_client_global:
+            logging.error("Failed to initialize GCS client for this cycle. GCS uploads will be skipped.")
+    # --- End Daily Counter Logic & GCS Client Init ---
 
     if not TAILORING_MODULES_LOADED:
-        logging.error("Tailoring modules not loaded. Full processing (tailoring, emailing) will be skipped.")
-    elif not llm_client_global or not orchestrator_agent_global:
-        if not initialize_tailoring_system():
+        logging.error("Tailoring modules not loaded. Full processing (tailoring, emailing, GCS upload) will be skipped.")
+    elif not llm_client_global or not orchestrator_agent_global: # Check if tailoring system components are ready
+        if not initialize_tailoring_system(): # This function should also handle gcs_client_global if you move init there
             logging.error("Failed to initialize tailoring system. Full processing will be skipped.")
 
     all_previously_scraped_jobs = load_jobs_from_file(CONSOLIDATED_ALL_JOBS_FILE)
@@ -1134,10 +1147,10 @@ def run_all_scrapers_and_process():
         
         if processed_jobs_for_this_config:
             newly_detailed_jobs_this_cycle.extend(processed_jobs_for_this_config)
-            for job in processed_jobs_for_this_config:
+            for job in processed_jobs_for_this_config: # Update globally seen IDs
                 if job.get('id'): seen_job_ids_globally.add(job['id'])
         
-        if i < len(SCRAPER_CONFIGS) - 1:
+        if i < len(SCRAPER_CONFIGS) - 1: # Delay between different scraper configs
             delay = random.uniform(5, 15)
             logging.info(f"Delaying {delay:.1f}s before next scraper config.")
             time.sleep(delay)
@@ -1146,7 +1159,7 @@ def run_all_scrapers_and_process():
     if newly_detailed_jobs_this_cycle:
         final_list_to_save = merge_and_deduplicate_jobs(all_previously_scraped_jobs, newly_detailed_jobs_this_cycle)
         save_jobs_to_file(CONSOLIDATED_ALL_JOBS_FILE, final_list_to_save)
-    else:
+    else: # No new jobs, but check if existing file needs deduplication
         if all_previously_scraped_jobs:
             deduplicated_old_jobs = merge_and_deduplicate_jobs(all_previously_scraped_jobs, [])
             if len(deduplicated_old_jobs) != len(all_previously_scraped_jobs):
@@ -1155,8 +1168,9 @@ def run_all_scrapers_and_process():
         else:
             logging.info(f"No new jobs detailed this cycle. {CONSOLIDATED_ALL_JOBS_FILE} remains unchanged or empty.")
 
+    # --- Job Filtering Logic ---
     relevant_new_jobs = []
-    processed_job_cores_this_cycle = set()
+    processed_job_cores_this_cycle = set() # For de-duping based on company|title within this run
 
     if newly_detailed_jobs_this_cycle:
         for job in newly_detailed_jobs_this_cycle:
@@ -1164,6 +1178,7 @@ def run_all_scrapers_and_process():
             job_url = job.get('url', '').lower()
             job_id = job.get('id', 'N/A')
 
+            # Domain exclusion filter
             is_excluded_source = False
             if job_url:
                 try:
@@ -1176,46 +1191,36 @@ def run_all_scrapers_and_process():
                             break
                 except Exception as e_url_parse:
                     logging.warning(f"Could not parse URL '{job_url}' for domain check (ID: {job_id}). Error: {e_url_parse}")
-            if is_excluded_source:
-                continue
+            if is_excluded_source: continue
 
+            # Seniority filter
             is_too_senior = False
             for senior_kw in EXCLUDE_JOB_TITLE_SENIORITY:
                 if re.search(r'\b' + re.escape(senior_kw) + r'\b', title_to_check):
-                    is_too_senior = True
-                    logging.debug(f"FILTERED (Seniority): Job '{title_to_check}' (ID: {job_id}) due to senior keyword: '{senior_kw}'.")
-                    break
-            if is_too_senior:
-                continue
+                    is_too_senior = True; logging.debug(f"FILTERED (Seniority): Job '{title_to_check}' (ID: {job_id})..."); break
+            if is_too_senior: continue
 
+            # Software Engineer specific logic filter
             is_se_title = any(se_term in title_to_check for se_term in SOFTWARE_ENGINEER_TERMS)
             if is_se_title:
-                has_ai_ml_modifier_in_title = any(modifier in title_to_check for modifier in AI_ML_DATA_MODIFIERS_FOR_SE_TITLE)
-                if not has_ai_ml_modifier_in_title:
-                    logging.debug(f"FILTERED (Generic SE): Job '{title_to_check}' (ID: {job_id}) is a software engineer role without AI/ML/Data modifiers in title.")
-                    continue
-                logging.debug(f"INFO (SE with Modifier): Job '{title_to_check}' (ID: {job_id}) is SE with AI/ML/Data modifier in title. Proceeding to general relevance check.")
-            else:
+                has_ai_ml_modifier = any(modifier in title_to_check for modifier in AI_ML_DATA_MODIFIERS_FOR_SE_TITLE)
+                if not has_ai_ml_modifier:
+                    logging.debug(f"FILTERED (Generic SE): Job '{title_to_check}' (ID: {job_id})..."); continue
+            else: # Not SE title, check general excluded fields
                 is_undesired_field = False
                 for undesired_kw in EXCLUDE_JOB_TITLE_FIELDS:
                     if re.search(r'\b' + re.escape(undesired_kw) + r'\b', title_to_check):
-                        is_undesired_field = True
-                        logging.debug(f"FILTERED (Other Field): Job '{title_to_check}' (ID: {job_id}) due to undesired field keyword: '{undesired_kw}'.")
-                        break
-                if is_undesired_field:
-                    continue
+                        is_undesired_field = True; logging.debug(f"FILTERED (Other Field): Job '{title_to_check}' (ID: {job_id})..."); break
+                if is_undesired_field: continue
 
+            # Relevance keyword matching
             desc_to_check = job.get('description', '').lower()
             combined_text_to_check = title_to_check + " " + desc_to_check
-            is_relevant_keyword_match = False
-            if not RELEVANT_JOB_KEYWORDS:
-                is_relevant_keyword_match = True
-            else:
+            is_relevant_keyword_match = not RELEVANT_JOB_KEYWORDS # True if no keywords specified
+            if RELEVANT_JOB_KEYWORDS:
                 for kw in RELEVANT_JOB_KEYWORDS:
-                    if kw.strip():
-                        if re.search(r'\b' + re.escape(kw.strip()) + r'\b', combined_text_to_check, re.IGNORECASE):
-                            is_relevant_keyword_match = True
-                            break
+                    if kw.strip() and re.search(r'\b' + re.escape(kw.strip()) + r'\b', combined_text_to_check, re.IGNORECASE):
+                        is_relevant_keyword_match = True; break
             
             if is_relevant_keyword_match:
                 company_name_for_dedupe = job.get('company_name', 'N/A').lower().strip()
@@ -1223,57 +1228,91 @@ def run_all_scrapers_and_process():
                 job_core_key = f"{company_name_for_dedupe}|{normalized_title_for_dedupe}"
 
                 if job_core_key in processed_job_cores_this_cycle:
-                    logging.info(f"FILTERED (Duplicate Core Job): '{title_to_check}' at '{company_name_for_dedupe}' (ID: {job_id}). Already processed a similar role for this company this cycle.")
+                    logging.info(f"FILTERED (Duplicate Core Job this cycle): '{title_to_check}' at '{company_name_for_dedupe}' (ID: {job_id}).")
                     continue
 
                 if job.get("description") and job.get("description").strip() != "N/A" and len(job.get("description").strip()) > 50 :
                     relevant_new_jobs.append(job)
                     processed_job_cores_this_cycle.add(job_core_key)
-                    logging.info(f"RELEVANT JOB ADDED: '{title_to_check}' at '{company_name_for_dedupe}' (ID: {job_id}). Matched all filters.")
+                    logging.info(f"RELEVANT JOB ADDED for processing: '{title_to_check}' at '{company_name_for_dedupe}' (ID: {job_id}).")
                 else:
-                    logging.warning(f"Job '{title_to_check}' (ID: {job_id}) matched positive keywords but has insufficient/missing description. Skipping for tailoring.")
+                    logging.warning(f"Job '{title_to_check}' (ID: {job_id}) matched keywords but has insufficient/missing description.")
             else:
-                logging.debug(f"FILTERED (No Relevant Keywords): Job '{title_to_check}' (ID: {job_id}) passed prior filters but did NOT match RELEVANT_JOB_KEYWORDS in title/desc.")
-
+                logging.debug(f"FILTERED (No Relevant Keywords): Job '{title_to_check}' (ID: {job_id}).")
+        
         if relevant_new_jobs:
             logging.info(f"Found {len(relevant_new_jobs)} relevant new jobs with descriptions for tailoring after all filters.")
             save_jobs_to_file(CONSOLIDATED_RELEVANT_NEW_JOBS_FILE, relevant_new_jobs)
         else:
             logging.info("No new jobs this cycle matched all filtering criteria or had descriptions.")
-            save_jobs_to_file(CONSOLIDATED_RELEVANT_NEW_JOBS_FILE, [])
+            save_jobs_to_file(CONSOLIDATED_RELEVANT_NEW_JOBS_FILE, []) # Save empty list
     else:
         logging.info("No new jobs were detailed this cycle to check for relevance.")
         save_jobs_to_file(CONSOLIDATED_RELEVANT_NEW_JOBS_FILE, [])
 
-    # --- Email Sending Part with New Subject Logic ---
+
+    # --- Tailoring, GCS Upload, and Emailing Part ---
+    any_processing_attempted_this_run = False # To track if we should increment the run counter
+
     if relevant_new_jobs and TAILORING_MODULES_LOADED and orchestrator_agent_global and llm_client_global and send_job_application_email:
         logging.info(f"Starting tailoring process for {len(relevant_new_jobs)} relevant jobs...")
-        successful_tailoring_count = 0
-        
-        # Determine if any emails will be sent in this run to increment counter
-        # This flag will be set if at least one job is successfully tailored and emailed.
-        any_email_sent_this_run = False
+        successful_tailoring_and_emailing_count = 0
+        any_processing_attempted_this_run = True # We are attempting to process relevant jobs
 
         for job_detail in relevant_new_jobs:
-            logging.info(f"--- Processing job ID: {job_detail.get('id')} for tailoring and emailing ---")
+            logging.info(f"--- Processing job ID: {job_detail.get('id')} for tailoring, GCS upload, and emailing ---")
             tailored_artifacts = run_tailoring_pipeline_for_job(job_detail)
             
             if tailored_artifacts:
-                successful_tailoring_count += 1
-                logging.info(f"Successfully processed and generated artifacts for job: {tailored_artifacts.get('job_title')} (ID: {job_detail.get('id')})")
+                logging.info(f"Successfully generated artifacts for job: {tailored_artifacts.get('job_title')} (ID: {job_detail.get('id')})")
+                
+                # --- GCS Upload Logic ---
+                gcs_upload_completed_for_resume = False
+                gcs_upload_completed_for_cl = False
+
+                if GCP_UTILS_LOADED and gcs_client_global and getattr(app_config, 'GCS_BUCKET_NAME', None):
+                    company_safe_gcs = re.sub(r'[^\w\-_.]', '_', tailored_artifacts.get('company_name', 'UnknownCompany'))
+                    now_gcs = datetime.datetime.now() # Use datetime.datetime.now()
+                    date_folder_gcs = now_gcs.strftime("%Y-%m-%d")
+                    time_prefix_gcs = now_gcs.strftime("%H%M%S%f") # Added microseconds for more uniqueness
+
+                    if tailored_artifacts.get("resume_pdf") and os.path.exists(tailored_artifacts["resume_pdf"]):
+                        resume_filename_gcs = os.path.basename(tailored_artifacts["resume_pdf"])
+                        gcs_resume_path = f"tailored_applications/{company_safe_gcs}/{date_folder_gcs}/{time_prefix_gcs}_{resume_filename_gcs}"
+                        logging.info(f"Attempting to upload resume to GCS: gs://{app_config.GCS_BUCKET_NAME}/{gcs_resume_path}")
+                        if upload_file_to_gcs(gcs_client_global, tailored_artifacts["resume_pdf"], gcs_resume_path):
+                            gcs_upload_completed_for_resume = True
+                            logging.info(f"Successfully uploaded resume to GCS: {gcs_resume_path}")
+                        else:
+                            logging.error(f"Failed to upload resume to GCS: {gcs_resume_path}")
+
+                    if tailored_artifacts.get("cover_letter_pdf") and os.path.exists(tailored_artifacts["cover_letter_pdf"]):
+                        cl_filename_gcs = os.path.basename(tailored_artifacts["cover_letter_pdf"])
+                        gcs_cl_path = f"tailored_applications/{company_safe_gcs}/{date_folder_gcs}/{time_prefix_gcs}_{cl_filename_gcs}"
+                        logging.info(f"Attempting to upload cover letter to GCS: gs://{app_config.GCS_BUCKET_NAME}/{gcs_cl_path}")
+                        if upload_file_to_gcs(gcs_client_global, tailored_artifacts["cover_letter_pdf"], gcs_cl_path):
+                            gcs_upload_completed_for_cl = True
+                            logging.info(f"Successfully uploaded cover letter to GCS: {gcs_cl_path}")
+                        else:
+                            logging.error(f"Failed to upload cover letter to GCS: {gcs_cl_path}")
+                else: # Log reasons for skipping GCS
+                    if not GCP_UTILS_LOADED: logging.warning("gcp_utils not loaded, skipping GCS upload.")
+                    elif not gcs_client_global: logging.warning("GCS client not initialized, skipping GCS upload.")
+                    elif not getattr(app_config, 'GCS_BUCKET_NAME', None): logging.warning("GCS_BUCKET_NAME not configured, skipping GCS upload.")
+                # --- End GCS Upload Logic ---
+
                 try:
-                    # --- CONSTRUCT THE NEW EMAIL SUBJECT ---
-                    date_str = CURRENT_DAY_TRACKER.strftime("%Y-%m-%d")
-                    original_subject_base = f"Application: {tailored_artifacts.get('job_title')} at {tailored_artifacts.get('company_name', 'N/A')}"
-                    email_subject = f"Job Apps {date_str} - Run {DAILY_RUN_COUNTER} "#- {original_subject_base}"
-                    # --- END SUBJECT CONSTRUCTION ---
+                    date_str_subject = CURRENT_DAY_TRACKER.strftime("%Y-%m-%d")
+                    # Using current_run_number_for_logging for the subject of emails sent in *this* cycle
+                    email_subject = f"Job Apps {date_str_subject} - Run {current_run_number_for_logging}"
 
                     email_body_parts = [
-                        f"Tailored application documents for the position of: {tailored_artifacts.get('job_title', 'N/A')}",
-                        f"Company: {tailored_artifacts.get('company_name', 'N/A')}",
+                        f"Tailored application documents for: {tailored_artifacts.get('job_title', 'N/A')} at {tailored_artifacts.get('company_name', 'N/A')}",
                         f"Job URL: {tailored_artifacts.get('job_url', 'N/A')}",
                         f"Platform: {tailored_artifacts.get('source_platform', 'N/A')} ({tailored_artifacts.get('search_source_name', 'N/A')})",
-                        f"Run ID: {date_str} / Run No: {DAILY_RUN_COUNTER}", # Added for body context
+                        f"Run ID: {date_str_subject} / Run No: {current_run_number_for_logging}",
+                        f"Resume GCS: {'Uploaded' if gcs_upload_completed_for_resume else 'Upload Failed/Skipped'}",
+                        f"Cover Letter GCS: {'Uploaded' if gcs_upload_completed_for_cl else 'Upload Failed/Skipped'}",
                         "\nCritique:",
                         tailored_artifacts.get('critique_text', "Critique not available."),
                         "--------------------"
@@ -1288,8 +1327,9 @@ def run_all_scrapers_and_process():
                     email_recipient_address = getattr(app_config, "APP_EMAIL_RECIPIENT", None)
                     if not email_recipient_address:
                         logging.error(f"Email recipient (APP_EMAIL_RECIPIENT) not configured. Email not sent for job ID {job_detail.get('id')}.")
-                        continue
+                        continue # Skip to next job
 
+                    # Check Brevo config (already in your provided code)
                     brevo_smtp_key_env_name = getattr(app_config, "BREVO_SMTP_KEY_ENV_VAR_NAME", "BREVO_SMTP_KEY")
                     brevo_smtp_key_fallback = getattr(app_config, "BREVO_SMTP_KEY_FALLBACK_FOR_TESTING", None)
                     can_resolve_key = os.getenv(brevo_smtp_key_env_name) or brevo_smtp_key_fallback
@@ -1297,53 +1337,50 @@ def run_all_scrapers_and_process():
                     can_resolve_sender_display = getattr(app_config, "BREVO_SENDER_DISPLAY_EMAIL", None)
 
                     if not (can_resolve_key and can_resolve_login and can_resolve_sender_display):
-                        logging.error(f"Brevo SMTP Key, Login, or Sender Display Email is not available from config/env. Email not sent for job ID {job_detail.get('id')}.")
+                        logging.error(f"Brevo SMTP Key, Login, or Sender Display Email not available. Email not sent for job ID {job_detail.get('id')}.")
                         continue
-                    
-                    logging.info(f"Preparing to send email with subject: {email_subject}") # Log the subject being used
 
+                    logging.info(f"Preparing to send email with subject: {email_subject}")
                     email_sent_successfully = send_job_application_email(
-                        subject=email_subject, # Pass the new dynamic subject
+                        subject=email_subject,
                         body=email_body,
                         recipient_email=email_recipient_address,
                         attachments=attachments_for_this_job
                     )
                     if email_sent_successfully:
-                        any_email_sent_this_run = True # Mark that at least one email was sent
+                        successful_tailoring_and_emailing_count += 1
                         logging.info(f"Email for job '{tailored_artifacts.get('job_title')}' sent successfully to {email_recipient_address}.")
+                        # Local PDF Deletion (Decision Point: Keep if GCS is primary, or remove this block)
                         if tailored_artifacts.get("resume_pdf") and os.path.exists(tailored_artifacts["resume_pdf"]):
-                            try: os.remove(tailored_artifacts["resume_pdf"]); logging.info(f"Deleted resume PDF: {tailored_artifacts['resume_pdf']}")
-                            except OSError as e_del: logging.warning(f"Could not delete resume PDF {tailored_artifacts['resume_pdf']}: {e_del}")
+                            try: os.remove(tailored_artifacts["resume_pdf"]); logging.info(f"Deleted local resume PDF: {tailored_artifacts['resume_pdf']}")
+                            except OSError as e_del: logging.warning(f"Could not delete local resume PDF {tailored_artifacts['resume_pdf']}: {e_del}")
                         if tailored_artifacts.get("cover_letter_pdf") and os.path.exists(tailored_artifacts["cover_letter_pdf"]):
-                            try: os.remove(tailored_artifacts["cover_letter_pdf"]); logging.info(f"Deleted CL PDF: {tailored_artifacts['cover_letter_pdf']}")
-                            except OSError as e_del: logging.warning(f"Could not delete CL PDF {tailored_artifacts['cover_letter_pdf']}: {e_del}")
+                            try: os.remove(tailored_artifacts["cover_letter_pdf"]); logging.info(f"Deleted local CL PDF: {tailored_artifacts['cover_letter_pdf']}")
+                            except OSError as e_del: logging.warning(f"Could not delete local CL PDF {tailored_artifacts['cover_letter_pdf']}: {e_del}")
                     else:
-                        logging.error(f"Failed to send email for job '{tailored_artifacts.get('job_title')}' (ID: {job_detail.get('id')}). Check email_sender logs and config.")
-                except Exception as e_email:
-                    logging.error(f"An error occurred during email preparation or sending for job ID {job_detail.get('id')}: {e_email}", exc_info=True)
+                        logging.error(f"Failed to send email for job '{tailored_artifacts.get('job_title')}' (ID: {job_detail.get('id')}).")
+                except Exception as e_email_block:
+                    logging.error(f"Error during GCS upload or email processing for job ID {job_detail.get('id')}: {e_email_block}", exc_info=True)
             else:
                 logging.warning(f"Tailoring pipeline failed or returned no artifacts for job: {job_detail.get('detailed_title')} (ID: {job_detail.get('id')})")
         
-        if successful_tailoring_count > 0:
-            logging.info(f"Successfully processed and attempted emailing for {successful_tailoring_count} jobs.")
+        if successful_tailoring_and_emailing_count > 0:
+            logging.info(f"Successfully processed, uploaded to GCS (if configured), and emailed for {successful_tailoring_and_emailing_count} jobs.")
         else:
-            logging.info("No job artifacts were successfully generated for emailing in this cycle.")
-            
-        # --- Increment Daily Run Counter AFTER all jobs in this run are processed ---
-        # Increment only if emails were potentially sent or processing happened.
-        # Or, more simply, increment if this run was "active" (e.g. relevant_new_jobs existed)
-        if any_email_sent_this_run or relevant_new_jobs : # Increment if we processed relevant jobs, even if all emails failed
-            DAILY_RUN_COUNTER += 1
-            logging.info(f"Daily run counter for {CURRENT_DAY_TRACKER} incremented to: {DAILY_RUN_COUNTER} for the next scheduled run.")
-        # --- End Counter Increment ---
+            logging.info("No job artifacts were successfully generated and emailed in this cycle.")
 
     elif not relevant_new_jobs:
         logging.info("No relevant new jobs to process for tailoring in this cycle.")
-    else:
-        logging.warning("Tailoring modules not loaded, system not initialized, or email sender not available. Skipping tailoring and emailing steps.")
+    else: # Catchall if tailoring modules not loaded etc.
+        logging.warning("Tailoring modules not loaded, system not initialized, or email sender not available. Skipping tailoring, GCS upload, and emailing steps.")
+
+    # --- Increment Daily Run Counter AFTER all jobs in this run are processed ---
+    if any_processing_attempted_this_run : # Increment if we attempted to process relevant jobs
+        DAILY_RUN_COUNTER += 1
+        logging.info(f"Daily run counter for {CURRENT_DAY_TRACKER} incremented to: {DAILY_RUN_COUNTER} for the next scheduled run.")
+    # --- End Counter Increment ---
     
-    logging.info(f"===== CYCLE END (Date: {CURRENT_DAY_TRACKER}, Last Processed Run: {DAILY_RUN_COUNTER-1 if (any_email_sent_this_run or relevant_new_jobs) else 'N/A - No activity this run'}) =====")
-    # The 'pass' at the end of the original function is not needed.
+    logging.info(f"===== CYCLE END (Date: {CURRENT_DAY_TRACKER}, Processed Run: {current_run_number_for_logging}) =====")
 
 if __name__ == "__main__":
     if app_config is None:
