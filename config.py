@@ -57,7 +57,7 @@ DEFAULT_TAILORED_JSON_PATH = os.path.join(DEFAULT_PDF_OUTPUT_DIR, TAILORED_JSON_
 # ... (other configurations like PROJECT_ROOT, SERVICE_ACCOUNT_JSON_CONTENT) ...
 
 # --- Google Cloud Storage Configuration ---
-GCS_BUCKET_NAME = os.getenv("GCS_BUCKET_NAME", "tailoring-agent") # Or directly your bucket name
+GCS_BUCKET_NAME = "tailoring-agent"#os.getenv("GCS_BUCKET_NAME", "tailoring-agent") # Or directly your bucket name
 # Ensure GOOGLE_CREDENTIALS_JSON_CONTENT is also set and has permissions for this bucket.
 
 # ... (rest of your configurations) ...
