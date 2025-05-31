@@ -167,3 +167,10 @@ The `config.py` file is central to the application's operation. It defines:
 * **Directory Creation:** Ensures necessary data and log directories are created on startup.
 
 It's crucial to set up the `.env` file correctly as `config.py` loads values from it. 
+
+## 📚 Detailed Documentation
+
+For a deeper dive into specific aspects of the project, please refer to the following documents:
+
+*   **[Core Resume Tailoring Pipeline (`Core_Resume_Tailoring_Pipeline.md`)](./Core_Resume_Tailoring_Pipeline.md):** This document details the core resume tailoring pipeline, from analyzing job descriptions to generating tailored application materials and critiquing the resume.
+*   **[Job Scraping, Utilities, and Deployment (`Job_Scraping_Utilities_Deployment.md`)](./Job_Scraping_Utilities_Deployment.md):** This document covers the job scraping capabilities, utility modules, PDF generation, and other supporting aspects of the Automated Resume Tailoring Agent. 
