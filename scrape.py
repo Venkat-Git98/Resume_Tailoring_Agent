@@ -472,8 +472,8 @@ def scrape_jobright_platform(scraper_cfg, platform_logger, seen_job_ids_globally
         platform_logger.info(f"Jobright: Navigating to {JOBRIGHT_URL} to check login status...") # JOBRIGHT_URL from scrape.py globals
         driver.get(JOBRIGHT_URL)
         time.sleep(3) 
-
-        main_signin_modal_trigger_button_selector = (By.XPATH, "//span[normalize-space()='SIGN IN' and contains(@class, 'index_text__wh4pg') and contains(@class, 'css-3l591y')]")
+        main_signin_modal_trigger_button_selector = (By.XPATH, "//span[normalize-space()='SIGN IN' and contains(@class, 'index_text__wh4pg') and contains(@class, 'css-w9mjmz')]")
+        #main_signin_modal_trigger_button_selector = (By.XPATH, "//span[normalize-space()='SIGN IN' and contains(@class, 'index_text__wh4pg') and contains(@class, 'css-3l591y')]")
         needs_login = False
 
         try:
