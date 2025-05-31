@@ -10,7 +10,7 @@ from typing import Optional # Import Optional if you use it for type hinting
 import os
 import json
 try:
-    from .. import config as app_config
+    import config as app_config
 except ImportError:
     # ... fallback ...
     class FallbackConfig:

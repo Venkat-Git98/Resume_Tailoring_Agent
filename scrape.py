@@ -421,11 +421,11 @@ def scrape_jobright_platform(scraper_cfg, platform_logger, seen_job_ids_globally
     # --- TEMPORARY DIAGNOSTIC STEP: Run WITHOUT the persistent user profile ---
     # This helps rule out profile corruption or permission issues with the profile directory.
     platform_logger.warning("Jobright: DIAGNOSTIC - Running WITHOUT user-data-dir for this attempt.")
-    # if jr_profile_dir and os.path.isabs(jr_profile_dir):
-    #     options.add_argument(f"user-data-dir={jr_profile_dir}")
-    #     platform_logger.info(f"Jobright: Using Chrome profile directory: {jr_profile_dir}")
-    # else:
-    #     platform_logger.warning(f"Jobright: Profile directory '{jr_profile_dir}' is not configured or not absolute. Using temporary profile.")
+    if jr_profile_dir and os.path.isabs(jr_profile_dir):
+        options.add_argument(f"user-data-dir={jr_profile_dir}")
+        platform_logger.info(f"Jobright: Using Chrome profile directory: {jr_profile_dir}")
+    else:
+        platform_logger.warning(f"Jobright: Profile directory '{jr_profile_dir}' is not configured or not absolute. Using temporary profile.")
     # --- END TEMPORARY DIAGNOSTIC STEP ---
 
     options.add_argument("--disable-extensions")
