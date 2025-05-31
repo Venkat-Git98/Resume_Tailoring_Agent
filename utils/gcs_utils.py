@@ -14,10 +14,10 @@ try:
 except ImportError:
     # ... fallback ...
     class FallbackConfig:
-        GOOGLE_CREDENTIALS_ENV_VAR_NAME = "GOOGLE_CREDENTIALS_JSON_CONTENT"
+        SERVICE_ACCOUNT_JSON_CONTENT = "GOOGLE_CREDENTIALS_JSON_CONTENT"
     app_config = FallbackConfig()
 
-env_var_name_to_look_for = app_config.GOOGLE_CREDENTIALS_ENV_VAR_NAME
+env_var_name_to_look_for = app_config.SERVICE_ACCOUNT_JSON_CONTENT
 actual_json_string_content = os.environ.get(env_var_name_to_look_for)
 
 if actual_json_string_content:

@@ -140,12 +140,12 @@ SCRAPER_CONFIGS = getattr(app_config, "SCRAPER_CONFIGS", [
     {
         "platform": "linkedin",
         "url": "https://www.linkedin.com/jobs/search/?keywords=Machine%20Learning%20Engineer&location=United%20States&geoId=103644278&f_TPR=r3600&f_E=1%2C2%2C3&position=1&pageNum=0",
-        "search_name": "Machine Learning Engineer (LinkedIn - USA, Last 24h)"
+        "search_name": "Machine Learning Engineer (LinkedIn - USA, Last 1h)"
     },
     {
         "platform": "linkedin",
         "url": "https://www.linkedin.com/jobs/search/?keywords=Data%20Scientist&location=United%20States&geoId=103644278&f_TPR=r3600&f_E=1%2C2%2C3&position=1&pageNum=0",
-        "search_name": "Data Scientist (LinkedIn - USA, Last 24h)"
+        "search_name": "Data Scientist (LinkedIn - USA, Last 1h)"
     },
     {
         "platform": "jobright",
