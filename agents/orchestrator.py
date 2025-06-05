@@ -127,28 +127,22 @@ class OrchestratorAgent:
             logging.warning("Skipping cover letter generation: Missing JD, or tailored resume is empty.")
 
         # 5. Critique Tailored Resume
-        if state.job_description and state.tailored_resume and \
-           (state.tailored_resume.summary or state.tailored_resume.work_experience or state.tailored_resume.projects):
-            logging.info("OrchestratorAgent: Critiquing tailored resume...")
+        if state.job_description and state.tailored_resume:
+            logging.info("OrchestratorAgent: Generating critique and messages...")
             try:
-                raw_critique, parsed_critique_obj = self.resume_judge_agent.run(
+                # The agent now returns a tuple
+                critique_obj, raw_text = self.resume_judge_agent.run(
                     job_desc=state.job_description,
                     tailored_resume=state.tailored_resume,
-                    candidate_name=contact_info_for_cl.get("name")
+                    master_profile_text=master_profile_text,
                 )
-                state.raw_critique_text = raw_critique
-                state.resume_critique = parsed_critique_obj
-                if state.resume_critique and state.resume_critique.ats_score is not None:
-                    logging.info(f"Resume critique complete. ATS Score: {state.resume_critique.ats_score:.1f}%")
-                elif raw_critique:
-                     logging.warning("Resume critique text generated, but parsing into structured object failed or was incomplete.")
-                else:
-                    logging.warning("Resume critique generation returned no text.")
-            except Exception as e_judge:
-                logging.error(f"Error during resume critique: {e_judge}", exc_info=True)
-                state.raw_critique_text = "Error generating resume critique."
-        else:
-            logging.warning("Skipping resume critique: Missing JD, or tailored resume is empty.")
+                state.resume_critique = critique_obj
+                state.raw_critique_text = raw_text # This now contains everything
+                if critique_obj:
+                    logging.info("Critique and messages generated successfully.")
 
+            except Exception as e_judge:
+                logging.error(f"Error during critique/message generation: {e_judge}", exc_info=True)
+        
         logging.info("OrchestratorAgent: Full pipeline process completed.")
         return state

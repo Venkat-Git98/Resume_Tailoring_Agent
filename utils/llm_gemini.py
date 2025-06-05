@@ -440,61 +440,101 @@ Provide ONLY the text of the cover letter, formatted as a standard business lett
     return prompt
 
 
+# In Resume_Tailoring/utils/llm_gemini.py
+
 def get_resume_critique_prompt(
     job_title: str,
-    job_description_text: str, 
-    ats_keywords: List[str],   
-    tailored_resume_text: str, # Full text of the tailored resume
-    candidate_name: Optional[str] = "the candidate"
-
+    company_name: str,
+    job_requirements_summary: str,
+    ats_keywords_str: str,
+    tailored_resume_summary_text: Optional[str],
+    master_profile_text: Optional[str]
 ) -> str:
-    logging.info("Generating enhanced prompt for comprehensive resume critique.")
-    ats_keywords_str = ", ".join(ats_keywords) if ats_keywords else "Not specifically provided."
-    
-   
+    """
+    Generates a comprehensive prompt for resume critique, a personalized hiring manager email,
+    and a LinkedIn connection request.
+    """
     prompt = f"""
-You are an expert AI resume reviewer combining the precision of an ATS with the critical eye of an experienced senior recruiter and a meticulous proofreader.
-Your task is to provide a comprehensive evaluation of the TAILORED RESUME for '{candidate_name}' against the JOB DESCRIPTION for the role of '{job_title}'.
+You are a world-class career coach and professional copywriter. Your task is to generate three outputs for a job application. You must follow all instructions precisely.
 
-**Inputs for Your Analysis:**
-1.  **Job Title:** {job_title}
-2.  **Full Job Description:**
-    ```
-    {job_description_text}
-    ```
-3.  **Key ATS Keywords derived from Job Description:** {ats_keywords_str}
-4.  **Candidate's Tailored Resume (TEXT ONLY):** ```
-    {tailored_resume_text}
-    ```
-    (Note: You are analyzing the text content. You cannot see the final PDF formatting or actual page breaks.)
+---
+**CRITICAL DATA FOR PERSONALIZATION - YOU MUST USE THIS EXACT DATA:**
+- **Company Name:** {company_name}
+- **Job Title:** {job_title}
+- **Candidate's Name:** Shanmugam
+---
 
-**Evaluation Output Required (Strict Format - Each item on a new line):**
-ATS_SCORE: [Provide a numerical percentage score from 0 to 100, e.g., 85.5, based on keyword alignment and content relevance.]
-ATS_PASS: [Brief assessment - e.g., Likely to pass, Borderline, Needs significant keyword improvement.]
-RECRUITER_IMPRESSION: [Brief assessment of overall impact on a recruiter - e.g., Highly impressive and engaging, Good fit needs minor polish, Lacks impact needs substantial revision.]
-POTENTIAL_LENGTH_CONCERN: [Based on the *amount of text*, assess if it's concise for a target of one page. Examples: 'Concise, likely fits one page.', 'Moderate length, should fit one page.', 'Extensive text, may risk exceeding one page; review section lengths carefully.', 'Very brief, might appear underdeveloped.']
-CONTENT_STRUCTURE_AND_CLARITY: [Assess if the content is well-organized (based on typical resume sections like Summary, Experience, Skills, Projects), if the language is clear, and if there are any sentences or phrases that seem out of place, awkward, or grammatically incorrect. Highlight any specific phrases needing immediate attention. Example: 'Well-structured. One phrase in projects, "...XYZ...", seems awkward and needs rephrasing.']
-FORMATTING_CONSISTENCY_FROM_TEXT: [Based *only* on the provided text, identify any textual inconsistencies that might *imply* formatting issues (e.g., mixed date formats if visible in text, inconsistent use of terminology for similar items, bullet points not starting with action verbs if that was an instruction). You cannot see visual formatting. Example: 'Bullet points in work experience consistently start with action verbs. Date formats appear consistent.' or 'Inconsistent phrasing for similar project metrics noted.']
+**ABSOLUTE RULES FOR ALL TASKS:**
+1.  **NO GENERIC TERMS:** You MUST use the exact **Company Name** ("{company_name}"). You MUST NOT use generic terms like "the company" or "your company."
+2.  **NO PLACEHOLDERS:** You are strictly forbidden from using any bracketed placeholders like `[Platform where you saw the job posting]` or `[Hiring Manager Name]`. If you don't have a piece of information, omit it entirely.
+---
 
-**Detailed Instructions for Each Output Point:**
-* **ATS_SCORE:** Focus on keyword density/relevance (ATS Keywords & JD terms), alignment of experience with job requirements, and overall structure readable by an ATS. Provide only the number.
-* **ATS_PASS:** Your qualitative judgment on ATS pass likelihood based on the score and analysis.
-* **RECRUITER_IMPRESSION:** Beyond keywords, assess if the achievements, clarity, and impact of language would quickly impress a human recruiter.
-* **POTENTIAL_LENGTH_CONCERN:** As you cannot see the PDF, make an educated guess based on the volume of text provided. Is it lean and impactful, or does it seem overly verbose suggesting it might struggle to fit a single page attractively?
-* **CONTENT_STRUCTURE_AND_CLARITY:** Look for logical flow between sections (if discernible from headers in the text), clarity of sentences, and any awkward phrasing or grammatical errors that need immediate attention before applying. Point out specific examples of problematic text if found.
-* **FORMATTING_CONSISTENCY_FROM_TEXT:** Comment on patterns in the text that suggest good or poor formatting discipline (e.g., are all job titles bolded if that's a text convention used? Are bullet points consistently structured in the text?). Avoid commenting on visual layout you cannot see.
+**Task 1: Resume Critique**
+* **Objective:** Provide a detailed, actionable critique.
+* **Formatting:** You MAY use markdown for this task (e.g., **Pros:**, `*` for lists).
+* **Output:** Score, Pros, Cons, Suggestions, and a Final Verdict.
 
-Keep each assessment concise and actionable.
+---
 
-*   **Output Format:** `RECRUITER_IMPRESSION: [Your assessment, e.g., Strengths: Clear summary and impactful project descriptions. Weaknesses: Work experience could be more quantified.]`
+**Task 2: Hyper-Personalized Email to Hiring Manager**
+* **Objective:** Write a specific, persuasive, and ready-to-send email.
+* **Formatting:** THIS MUST BE PLAIN TEXT. Do NOT use any markdown (`##`, `**`, `*`).
 
-**Example of the EXACT expected output format (Your response MUST look like this):**
-```
-ATS_SCORE: 88%
-ATS_PASS: Likely to pass. The resume shows good alignment with several key skills like Python, machine learning, and data analysis, which are prominent in the job description.
-RECRUITER_IMPRESSION: The resume is well-structured and easy to read. The summary effectively highlights relevant experience. To further strengthen, quantify achievements in the project section more consistently.
-```
+* ### DO:
+    * Address it to "Dear Hiring Manager,".
+    * State the specific **Job Title** ("{job_title}") and **Company Name** ("{company_name}") in the opening sentence.
+    * Connect the candidate's experience directly to the job requirements.
+    * Sign off with the **Candidate's Name** ("Shanmugam").
 
-**Your entire output MUST strictly follow this three-part structure with the specified labels (ATS_SCORE:, ATS_PASS:, RECRUITER_IMPRESSION:). Do not add any other text, headers, or explanations.**
+* ### DON'T:
+    * **Do NOT use placeholders of any kind.**
+    * **Do NOT mention the platform where the job was seen.**
+    * **Do NOT use the generic phrase "at the company".**
+
+---
+
+**Task 3: LinkedIn Connection Request**
+* **Objective:** Write a brief, professional, and ready-to-send connection request.
+* **Formatting:** THIS MUST BE PLAIN TEXT. Do NOT use any markdown.
+
+* ### DO:
+    * Start with a polite opening like "Hello,".
+    * Mention the **Company Name** ("{company_name}") and something specific about the **Job Title**.
+
+* ### DON'T:
+    * **Do NOT use placeholders.**
+    * **Do NOT use generic phrases.**
+
+---
+**CANDIDATE AND JOB CONTEXT:**
+- **Candidate's Master Profile:** {master_profile_text}
+- **Candidate's Tailored Resume Summary:** {tailored_resume_summary_text}
+- **Key Job Requirements:** {job_requirements_summary}
+- **ATS Keywords:** {ats_keywords_str}
+---
+
+**FINAL OUTPUT FORMAT (Strict):**
+Provide the output in the exact format below, following all rules.
+
+SCORE:
+...
+
+PROS:
+...
+
+CONS:
+...
+
+SUGGESTIONS:
+...
+
+FINAL_VERDICT:
+...
+
+HIRING_MANAGER_EMAIL:
+...
+
+CONNECTION_REQUEST:
+...
 """
     return prompt

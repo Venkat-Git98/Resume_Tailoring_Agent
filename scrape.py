@@ -408,7 +408,6 @@ def extract_linkedin_job_page_details(job_url):
 
 
 
-# THIS IS THE NEW FUNCTION TO REPLACE THE OLD scrape_jobright_platform
 
 def scrape_jobright_platform(scraper_cfg, platform_logger, seen_job_ids_globally):
     platform_logger.info(f"Jobright: Starting scraping for: {scraper_cfg.get('search_name')}")
@@ -1094,7 +1093,8 @@ def run_tailoring_pipeline_for_job(job_details: Dict[str, any]) -> Optional[Dict
             critique_parts.append(f"  Raw Critique (Parsing Failed/Incomplete):\n{final_state.raw_critique_text}")
         else:
             critique_parts.append("  No structured resume critique was generated or available in final_state.")
-        final_critique_text = "\n".join(critique_parts)
+        # final_critique_text = "\n".join(critique_parts)
+        final_critique_text = final_state.raw_critique_text or "Critique generation failed."
 
         artifacts_to_return = {
             "job_id": job_details.get("id"),

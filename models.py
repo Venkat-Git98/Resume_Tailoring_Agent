@@ -14,13 +14,24 @@ class ResumeSections(BaseModel):
     projects: Optional[str] = None
 
 # In models.py
+# class ResumeCritique(BaseModel):
+#     ats_score: Optional[float] = Field(None, description="ATS-like score (0-100%)")
+#     ats_pass_assessment: Optional[str] = Field(None, description="Brief assessment of ATS pass likelihood")
+#     recruiter_impression_assessment: Optional[str] = Field(None, description="Brief assessment of recruiter impression")
+#     potential_length_concern: Optional[str] = Field(None, description="Assessment of text volume regarding one-page target")
+#     content_structure_and_clarity: Optional[str] = Field(None, description="Notes on content organization, clarity, and awkward phrasing")
+#     formatting_consistency_from_text: Optional[str] = Field(None, description="Observations on textual consistency implying formatting discipline")
+
 class ResumeCritique(BaseModel):
-    ats_score: Optional[float] = Field(None, description="ATS-like score (0-100%)")
-    ats_pass_assessment: Optional[str] = Field(None, description="Brief assessment of ATS pass likelihood")
-    recruiter_impression_assessment: Optional[str] = Field(None, description="Brief assessment of recruiter impression")
-    potential_length_concern: Optional[str] = Field(None, description="Assessment of text volume regarding one-page target")
-    content_structure_and_clarity: Optional[str] = Field(None, description="Notes on content organization, clarity, and awkward phrasing")
-    formatting_consistency_from_text: Optional[str] = Field(None, description="Observations on textual consistency implying formatting discipline")
+    score: Optional[float] = Field(None, description="The numerical score of the resume.")
+    pros: List[str] = Field(default_factory=list, description="The pros of the resume.")
+    cons: List[str] = Field(default_factory=list, description="The cons of the resume.")
+    suggestions: List[str] = Field(default_factory=list, description="Suggestions for improvement.")
+    final_verdict: Optional[str] = Field(None, description="The final verdict on the resume's suitability.")
+    
+    # Add these two new fields
+    email_to_hiring_manager: Optional[str] = Field(None, description="Personalized email to the hiring manager.")
+    connection_request: Optional[str] = Field(None, description="Connection request message for LinkedIn.")
 class TailoringState(BaseModel):
     job_description: Optional[JobDescription] = None
     original_resume: Optional[ResumeSections] = None
