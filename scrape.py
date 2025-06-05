@@ -420,7 +420,7 @@ def scrape_jobright_platform(scraper_cfg, platform_logger, seen_job_ids_globally
     newly_detailed_jobs_for_jobright = []
 
     options = webdriver.ChromeOptions()
-    # options.add_argument('--headless')
+    options.add_argument('--headless')
     options.add_argument("--window-size=1920,1080")
 
     # --- TEMPORARY DIAGNOSTIC STEP: Run WITHOUT the persistent user profile ---
