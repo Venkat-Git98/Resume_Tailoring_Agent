@@ -420,7 +420,7 @@ def scrape_jobright_platform(scraper_cfg, platform_logger, seen_job_ids_globally
     newly_detailed_jobs_for_jobright = []
 
     options = webdriver.ChromeOptions()
-    options.add_argument('--headless')
+    # options.add_argument('--headless')
     options.add_argument("--window-size=1920,1080")
 
     # --- TEMPORARY DIAGNOSTIC STEP: Run WITHOUT the persistent user profile ---
@@ -568,6 +568,40 @@ def scrape_jobright_platform(scraper_cfg, platform_logger, seen_job_ids_globally
             if driver: driver.save_screenshot(os.path.join(project_root, "screenshots_scraper",f"{scraper_cfg.get('search_name', 'jobright_no_cards').replace(' ', '_')}_no_cards.png"))
             return []
 
+        # --- NEW: Click on Recommended dropdown and select Most Recent ---
+        platform_logger.info("Jobright: Attempting to select 'Most Recent' from Recommended dropdown...")
+        try:
+            # Click on the "Recommended" dropdown
+            recommended_dropdown_selector = (By.XPATH, "//span[@class='ant-select-selection-item' and @title='Recommended' and text()='Recommended']")
+            recommended_dropdown = wait.until(EC.element_to_be_clickable(recommended_dropdown_selector))
+            platform_logger.info("Jobright: Found 'Recommended' dropdown. Clicking...")
+            recommended_dropdown.click()
+            
+            # Wait for 3 seconds as requested
+            platform_logger.info("Jobright: Waiting 3 seconds after clicking Recommended dropdown...")
+            time.sleep(3)
+            
+            # Click on "Most Recent" option
+            most_recent_option_selector = (By.XPATH, "//div[@class='ant-select-item-option-content' and text()='Most Recent']")
+            most_recent_option = wait.until(EC.element_to_be_clickable(most_recent_option_selector))
+            platform_logger.info("Jobright: Found 'Most Recent' option. Clicking...")
+            most_recent_option.click()
+            
+            # Wait for the page to update with new sorting
+            platform_logger.info("Jobright: Waiting for page to update after selecting 'Most Recent'...")
+            time.sleep(2)
+            
+            # Verify job cards are still present after sorting change
+            wait.until(EC.presence_of_element_located((By.CLASS_NAME, "index_job-card__AsPKC")))
+            platform_logger.info("Jobright: Successfully selected 'Most Recent' and job cards are still present.")
+            
+        except TimeoutException:
+            platform_logger.warning("Jobright: Could not find 'Recommended' dropdown or 'Most Recent' option within timeout. Proceeding with default sorting...")
+        except Exception as e_dropdown:
+            platform_logger.error(f"Jobright: Error while trying to select 'Most Recent' from dropdown: {e_dropdown}", exc_info=True)
+            platform_logger.info("Jobright: Proceeding with default sorting...")
+        # --- END NEW: Dropdown selection logic ---
+
         platform_logger.info(f"Jobright: Attempting to load up to {target_job_count} job cards...")
         job_card_locator = (By.CLASS_NAME, "index_job-card__AsPKC")
         
@@ -691,7 +725,7 @@ def scrape_jobright_platform(scraper_cfg, platform_logger, seen_job_ids_globally
                 # Construct job URL for ID parsing and output (can be refined)
                 # The user script didn't extract a specific apply URL from the pane.
                 # This constructed URL is for internal tracking and ID generation.
-                constructed_job_url = f"{JOBRIGHT_RECOMMEND_URL}#card_id_{job_id_from_card_attr}"
+                constructed_job_url = f"https://jobright.ai/jobs/info/{job_id_from_card_attr}"
 
                 stable_job_id, id_source_val = parse_job_id_for_platform(
                     raw_id_attribute_val=job_id_from_card_attr, # Using the card's DOM ID as raw

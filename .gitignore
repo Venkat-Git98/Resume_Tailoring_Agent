@@ -9,7 +9,7 @@ __pycache__/
 *.egg
 venv/
 *.env # IMPORTANT: Never commit your actual .env file
-
+.env
 # IDE / Editor
 .vscode/
 .idea/

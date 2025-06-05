@@ -117,6 +117,25 @@ SCRAPER_RELEVANT_JOB_KEYWORDS = [
     "analytics", "statistician", "quantitative", "software", "developer", "llm", "prompt engineering", "rag"
 ]
 
+# --- Job Source Domain Exclusion Configuration ---
+EXCLUDE_JOB_SOURCES_DOMAINS = [
+    "lensa.com", "dice.com", "ziprecruiter.com", "glassdoor.com", 
+    "monster.com", "careerbuilder.com", "indeed.com", "simplyhired.com",
+    "snagajob.com", "workopolis.com", "jobbank.gc.ca"
+]
+
+# --- Other Job Filtering Configuration ---
+RELEVANT_JOB_KEYWORDS = [
+    "data scientist", "machine learning", "ml engineer", "ai engineer", 
+    "data engineer", "applied scientist", "research scientist", "software engineer",
+    "developer", "llm", "prompt engineering", "rag", "artificial intelligence"
+]
+
+SOFTWARE_ENGINEER_TERMS = ["software engineer", "sde", "software developer"]
+AI_ML_DATA_MODIFIERS_FOR_SE_TITLE = ["ai", "ml", "machine learning", "data", "artificial intelligence"]
+EXCLUDE_JOB_TITLE_FIELDS = ["frontend", "ui developer", "web developer", "mobile developer", "ios developer", "android developer"]
+EXCLUDE_JOB_TITLE_SENIORITY = ["lead", "principal", "director", "manager", "senior manager", "vp", "head of"]
+
 # --- Email Configuration (Now Centralized for Brevo) ---
 # Brevo SMTP Settings
 BREVO_SMTP_SERVER = "smtp-relay.brevo.com"
