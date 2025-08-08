@@ -12,7 +12,7 @@ The **Automated Resume Tailoring Agent** is a sophisticated Python-based applica
 * **Provide Feedback:** Offer critiques on tailored resumes to help improve their effectiveness.
 * **Streamline Job Search:** Automatically scrape and filter relevant job postings.
 
-##  архитектура High-Level Architecture
+##   High-Level Architecture
 
 The system is designed with a modular architecture, comprising several interconnected components:
 
